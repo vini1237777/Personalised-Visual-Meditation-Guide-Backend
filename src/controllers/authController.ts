@@ -25,7 +25,7 @@ export default class AuthController {
       });
 
       return res.status(201).json({
-        user: { id: id, email: email, roles: roles },
+        user,
         token,
       });
     } catch (err) {
@@ -43,7 +43,7 @@ export default class AuthController {
       });
 
       return res.status(200).json({
-        user: { id, email, roles },
+        user,
         token,
       });
     } catch (err) {
