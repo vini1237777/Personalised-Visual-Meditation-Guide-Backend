@@ -34,7 +34,10 @@ export class AuthDao {
 
   static async login({ email, password }: { email: string; password: string }) {
     try {
+      console.log(email, "Auth dao login.......");
+
       const user: any = await userModel.findOne({ email });
+
       // console.log(password, user.password, "passwords");
 
       // console.log(user, "user in login controller");
@@ -51,7 +54,7 @@ export class AuthDao {
       // console.log("JWT secret key is defined");
       // console.log("User found and password matched");
       // Generate JWT token
-      const token = jwt.sign({ userId: user?._id }, jwtSecret, {
+      const token = jwt.sign({ userId: user?.id }, jwtSecret, {
         expiresIn: "1h",
       });
 
