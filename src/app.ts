@@ -1,69 +1,92 @@
-require("dotenv").config();
+// src/app.ts
+import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
-const app = express();
+import cors from "cors";
+
+// ROUTES
 import { userRoutes } from "./routes/userRoutes";
 import { authRoutes } from "./routes/authRoutes";
-import cors from "cors";
 import { scriptRoutes } from "./routes/scriptGenerator";
-// import { createScript } from "./services/scriptService";
-// import bodyParser from "body-parser";
 
-// For parsing application/json
+const app = express();
+
+/** ---- Core middleware ---- */
 app.use(express.json());
-
-// For parsing application/x-www-form-urlencoded
 app.use(express.urlencoded({ extended: true }));
 
-app.use(cors());
-
+/** ---- CORS ----
+ * Set WEB_ORIGIN to your frontend origin:
+ *   e.g. https://hjvdjwhe74638.cloudfront.net  (or your custom domain)
+ * If you want multiple allowed origins, see the array version below.
+ */
+const WEB_ORIGIN = process.env.WEB_ORIGIN;
+if (!WEB_ORIGIN) {
+  console.warn("WEB_ORIGIN not set. CORS will allow no origins.");
+}
 app.use(
-  (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    res.header(
-      "Access-Control-Allow-Methods",
-      "OPTIONS, GET, POST, PUT, PATCH, DELETE"
-    );
-    res.header(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Accept," + " Authorization,"
-    );
-    res.header("Access-Control-Allow-origin", "*");
-    next();
-  }
+  cors({
+    origin: (origin, cb) => {
+      // Allow non-browser tools (curl/postman have no origin)
+      if (!origin) return cb(null, true);
+
+      // Single-origin allow list
+      if (origin === WEB_ORIGIN) return cb(null, true);
+
+      // If you prefer multiple origins, replace this block with an array check.
+      return cb(new Error("CORS: origin not allowed"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  })
 );
+
+/** If you WANT multiple origins, use this instead of the cors() above:
+const allow = (process.env.WEB_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean); // e.g. "https://app.example.com,https://hjvdjwhe74638.cloudfront.net"
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allow.includes(origin)) return cb(null, true);
+    return cb(new Error('CORS: origin not allowed'));
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','Accept'],
+}));
+*/
+
+/** ---- Routes ---- */
+app.get("/api/health", (_req, res) => res.status(200).send("ok"));
 
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/script", scriptRoutes);
 
-app.use(express.json());
-// app.use(bodyParser.urlencoded({ extended: false }));
-// app.use(bodyParser.json());
-
+/** ---- MongoDB ---- */
 const mongoUri = process.env.MONGODB_URI;
 if (!mongoUri) {
-  throw new Error("MONGODB_URI environment variable is not defined.");
+  throw new Error("MONGODB_URI is not set");
 }
-
 mongoose
-  .connect(mongoUri)
+  .connect(mongoUri, {
+    // Add options if you need, mongoose v7 usually fine without
+  })
   .then(() => console.log("Connected to MongoDB"))
-  .catch((err: any) => console.error("MongoDB connection error:", err));
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  });
 
-const port = process.env.PORT || 4000;
-
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+/** ---- Server ---- */
+const port = Number(process.env.PORT) || 3000;
+const host = process.env.HOST || "0.0.0.0"; // bind all interfaces for EC2
+app.listen(port, host, () => {
+  console.log(`API listening on http://${host}:${port}`);
 });
 
-// const selectedFeelings = ["warmth"];
-// const selectedEmojis = ["😀"];
-
-// const res = createScript({ selectedFeelings, selectedEmojis })
-//   .then((res) => {
-//     console.log(res);
-//   })
-//   .then((result) => {
-//     console.log(result);
-//   })
-//   .catch((error) => console.log(error));
+export default app;
