@@ -9,7 +9,7 @@ import { userRoutes } from "./routes/userRoutes";
 import { authRoutes } from "./routes/authRoutes";
 import { scriptRoutes } from "./routes/scriptGenerator";
 
-const allowedOrigins = ["http://localhost:3000", process.env.WEB_ORIGIN];
+const allowedOrigins = ["http://localhost:3000/", process.env.WEB_ORIGIN];
 const app = express();
 
 // app.use(
