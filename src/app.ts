@@ -54,11 +54,11 @@ app.use(cors({
 */
 
 /** ---- Routes ---- */
-app.get("/health", (_req, res) => res.status(200).send("ok"));
+app.get("/api/health", (_req, res) => res.status(200).send("ok"));
 
-app.use("/user", userRoutes);
-app.use("/auth", authRoutes);
-app.use("/script", scriptRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/script", scriptRoutes);
 
 /** ---- MongoDB ---- */
 const mongoUri = process.env.MONGODB_URI;
