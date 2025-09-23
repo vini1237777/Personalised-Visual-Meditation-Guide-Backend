@@ -77,7 +77,7 @@ mongoose
 
 /** ---- Server ---- */
 const port = Number(process.env.PORT) || 3000;
-const host = process.env.HOST || "0.0.0.0"; // bind all interfaces for EC2
+const host = process.env.HOST || "0.0.0.0:3000"; // bind all interfaces for EC2
 app.listen(port, host, () => {
   console.log(`API listening on http://${host}:${port}`);
 });
