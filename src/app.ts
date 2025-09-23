@@ -20,25 +20,26 @@ app.use(express.urlencoded({ extended: true }));
  *   e.g. https://hjvdjwhe74638.cloudfront.net  (or your custom domain)
  * If you want multiple allowed origins, see the array version below.
  */
-const WEB_ORIGIN = process.env.WEB_ORIGIN;
-if (!WEB_ORIGIN) {
-  console.warn("WEB_ORIGIN not set. CORS will allow no origins.");
-}
+// const WEB_ORIGIN = process.env.WEB_ORIGIN;
+// if (!WEB_ORIGIN) {
+//   console.warn("WEB_ORIGIN not set. CORS will allow no origins.");
+// }
 app.use(
   cors({
-    origin: (origin, cb) => {
-      // Allow non-browser tools (curl/postman have no origin)
-      if (!origin) return cb(null, true);
-
-      // Single-origin allow list
-      if (origin === WEB_ORIGIN) return cb(null, true);
-
-      // If you prefer multiple origins, replace this block with an array check.
-      return cb(new Error("CORS: origin not allowed"));
-    },
-    credentials: true,
+    origin: "https://d3jpf9la46kzt4.cloudfront.net", // your CF domain (or your custom domain)
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true,
+  })
+);
+
+app.options(
+  "*",
+  cors({
+    origin: "https://d3jpf9la46kzt4.cloudfront.net", // your CF domain (or your custom domain)
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true,
   })
 );
 
