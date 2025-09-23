@@ -24,16 +24,24 @@ app.use(express.urlencoded({ extended: true }));
 // if (!WEB_ORIGIN) {
 //   console.warn("WEB_ORIGIN not set. CORS will allow no origins.");
 // }
-const ORIGIN = "https://d3jpf9la46kzt4.cloudfront.net";
 app.use(
   cors({
-    origin: ORIGIN,
+    origin: "https://d3jpf9la46kzt4.cloudfront.net", // your CF domain (or your custom domain)
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     credentials: true,
   })
 );
-app.options("*", cors({ origin: ORIGIN, credentials: true }));
+
+app.options(
+  "*",
+  cors({
+    origin: "https://d3jpf9la46kzt4.cloudfront.net", // your CF domain (or your custom domain)
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true,
+  })
+);
 
 /** If you WANT multiple origins, use this instead of the cors() above:
 const allow = (process.env.WEB_ORIGINS || '')
@@ -77,7 +85,7 @@ mongoose
 
 /** ---- Server ---- */
 const port = Number(process.env.PORT) || 3000;
-const host = process.env.HOST || "0.0.0.0:3000"; // bind all interfaces for EC2
+const host = process.env.HOST || "0.0.0.0"; // bind all interfaces for EC2
 app.listen(port, host, () => {
   console.log(`API listening on http://${host}:${port}`);
 });
