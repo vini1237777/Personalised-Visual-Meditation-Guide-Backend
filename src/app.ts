@@ -33,15 +33,15 @@ app.use(
   })
 );
 
-app.options(
-  "*",
-  cors({
-    origin: "https://d3jpf9la46kzt4.cloudfront.net", // your CF domain (or your custom domain)
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    credentials: true,
-  })
-);
+// app.options(
+//   "*",
+//   cors({
+//     origin: "https://d3jpf9la46kzt4.cloudfront.net", // your CF domain (or your custom domain)
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+//     credentials: true,
+//   })
+// );
 
 /** If you WANT multiple origins, use this instead of the cors() above:
 const allow = (process.env.WEB_ORIGINS || '')
