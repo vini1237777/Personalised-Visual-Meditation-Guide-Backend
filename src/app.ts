@@ -62,7 +62,10 @@ app.use(cors({
 */
 
 /** ---- Routes ---- */
-app.get("/api/health", (_req, res) => res.status(200).send("ok"));
+app.get("/api/health", (_req, res) => {
+  const dbUp = mongoose.connection.readyState === 1;
+  res.status(200).json({ ok: true, db: dbUp ? "up" : "down" });
+});
 
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
