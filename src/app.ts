@@ -77,15 +77,13 @@ if (!mongoUri) {
   throw new Error("MONGODB_URI is not set");
 }
 mongoose
-  .connect(mongoUri, {
-    // Add options if you need, mongoose v7 usually fine without
+  .connect("mongodb://localhost/mydatabase", {})
+  .then(() => {
+    console.log("Connected to MongoDB");
   })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-    process.exit(1);
+  .catch((error) => {
+    console.error("Error connecting to MongoDB:", error);
   });
-
 /** ---- Server ---- */
 const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || "0.0.0.0"; // bind all interfaces for EC2
