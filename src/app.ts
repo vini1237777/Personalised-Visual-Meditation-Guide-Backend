@@ -24,24 +24,16 @@ app.use(express.urlencoded({ extended: true }));
 // if (!WEB_ORIGIN) {
 //   console.warn("WEB_ORIGIN not set. CORS will allow no origins.");
 // }
+const ORIGIN = "https://d3jpf9la46kzt4.cloudfront.net";
 app.use(
   cors({
-    origin: "https://d3jpf9la46kzt4.cloudfront.net", // your CF domain (or your custom domain)
+    origin: ORIGIN,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     credentials: true,
   })
 );
-
-app.options(
-  "*",
-  cors({
-    origin: "https://d3jpf9la46kzt4.cloudfront.net", // your CF domain (or your custom domain)
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    credentials: true,
-  })
-);
+app.options("*", cors({ origin: ORIGIN, credentials: true }));
 
 /** If you WANT multiple origins, use this instead of the cors() above:
 const allow = (process.env.WEB_ORIGINS || '')
