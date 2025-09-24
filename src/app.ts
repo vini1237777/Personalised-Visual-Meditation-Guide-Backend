@@ -9,39 +9,71 @@ import { userRoutes } from "./routes/userRoutes";
 import { authRoutes } from "./routes/authRoutes";
 import { scriptRoutes } from "./routes/scriptGenerator";
 
-const allowedOrigins = ["http://localhost:3000", process.env.WEB_ORIGIN];
 const app = express();
+
+// /** ---- Core middleware ---- */
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+/** ---- Routes ---- */
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://d3jpf9la46kzt4.cloudfront.net",
+];
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin) return cb(null, true);
+      cb(null, allowedOrigins.includes(origin));
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
+app.options("*", cors());
+
+// const corsOptions = {
+//   origin: function (origin: any, callback: any) {
+//     // Check if the requesting origin is in the allowedOrigins array
+//     if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+//       callback(null, true); // Allow the request
+//     } else {
+//       callback(new Error("Not allowed by CORS")); // Deny the request
+//     }
+//   },
+//   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization"],
+//   credentials: true, // Allow sending cookies/authorization headers
+//   optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
+// };
+
+// Use the CORS middleware with your configured options
+// app.use(cors(corsOptions));
 
 // app.use(
 //   cors({
-//     origin(origin, cb) {
-//       if (!origin) return cb(null, true);
-//       cb(null, allowedOrigins.includes(origin));
-//     },
+//     origin: ["http://localhost:3000/", `${process.env.WEB_ORIGIN}`],
 //     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-//     allowedHeaders: ["Content-Type", "Authorization"],
 //     credentials: true,
+//     allowedHeaders: ["Content-Type", "Authorization"],
 //   })
 // );
-// app.options("*", cors());
 
-const corsOptions = {
-  origin: function (origin: any, callback: any) {
-    // Check if the requesting origin is in the allowedOrigins array
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true); // Allow the request
-    } else {
-      callback(new Error("Not allowed by CORS")); // Deny the request
-    }
-  },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // Allow sending cookies/authorization headers
-  optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
-};
-
-// Use the CORS middleware with your configured options
-app.use(cors(corsOptions));
+// app.use((req, res, next) => {
+//   if (allowed.includes(req.headers.origin || "")) {
+//     res.header("Access-Control-Allow-Origin", "*");
+//   }
+//   res.header(
+//     "Access-Control-Allow-Methods",
+//     "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+//   );
+//   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+//   res.header("Access-Control-Allow-Credentials", "true");
+//   if (req.method === "OPTIONS") return res.sendStatus(204);
+//   next();
+// });
 
 // app.options("*", (req, res) => {
 //   res.header("Access-Control-Allow-Origin", "*");
@@ -50,10 +82,6 @@ app.use(cors(corsOptions));
 //   res.sendStatus(200);
 // });
 
-// /** ---- Core middleware ---- */
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-/** ---- Routes ---- */
 app.get("/api/health", (_req, res) => {
   const dbUp = mongoose.connection.readyState === 1;
   res.status(200).json({ ok: true, db: dbUp ? "up" : "down" });
@@ -69,7 +97,7 @@ if (!mongoUri) {
   throw new Error("MONGODB_URI is not set");
 }
 mongoose
-  .connect("mongodb://localhost/mydatabase", {})
+  .connect(`${process.env.MONGODB_URI}`, {})
   .then(() => {
     console.log("Connected to MongoDB");
   })
