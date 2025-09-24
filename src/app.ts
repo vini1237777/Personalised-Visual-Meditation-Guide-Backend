@@ -14,31 +14,21 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/** ---- CORS ---- */
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://d3jpf9la46kzt4.cloudfront.net",
+  "https://d3jpf9la46kzt4.cloudfront.net/",
 ];
-
 app.use(
   cors({
-    origin(origin, cb) {
-      // allow non-browser clients (no Origin) and the whitelisted ones
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      // don’t crash the server if origin is not allowed; just disable CORS for that request
-      return cb(null, false);
-    },
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
-// app.options("*", cors());
 
-/** ---- Health ---- */
 app.get("/api/health", (_req, res) => {
-  const dbUp = mongoose.connection.readyState === 1;
-  res.status(200).json({ ok: true, db: dbUp ? "up" : "down" });
+  res.status(200).json({ ok: true });
 });
 
 /** ---- Routes ---- */
