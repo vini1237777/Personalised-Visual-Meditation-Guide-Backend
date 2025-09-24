@@ -10,7 +10,6 @@ import { scriptRoutes } from "./routes/scriptGenerator";
 
 const app = express();
 
-/** ---- Core middleware ---- */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -31,12 +30,10 @@ app.get("/api/health", (_req, res) => {
   res.status(200).json({ ok: true });
 });
 
-/** ---- Routes ---- */
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/script", scriptRoutes);
 
-/** ---- MongoDB (do NOT throw; connect lazily) ---- */
 const mongoUri = process.env.MONGODB_URI;
 if (!mongoUri) {
   console.warn("MONGODB_URI is not set. API will run, DB will be DOWN.");
