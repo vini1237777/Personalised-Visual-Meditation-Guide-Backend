@@ -1,4 +1,3 @@
-// src/controllers/auth.controller.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import AuthService from "../services/authService";
@@ -25,7 +24,7 @@ export default class AuthController {
       });
 
       return res.status(201).json({
-        user,
+        ...user,
         token,
       });
     } catch (err) {
@@ -36,16 +35,33 @@ export default class AuthController {
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password, roles, id } = req.body;
-      const user = await AuthService.login({ email, password }); // throws on invalid
+      const data = await AuthService.login({ email, password }); // throws on invalid
       const secret = process.env.JWT_ACCESS_SECRET!;
       const token = jwt.sign({ sub: id, roles }, secret, {
         expiresIn: ACCESS_EXPIRES_IN,
       });
 
       return res.status(200).json({
-        user,
+        data,
         token,
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async login1(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, password } = req.body;
+      const user = await AuthService.login({ email, password });
+
+      const secret = process.env.JWT_ACCESS_SECRET!;
+
+      const token = jwt.sign({ sub: user.id, roles: user.roles }, secret, {
+        expiresIn: ACCESS_EXPIRES_IN || "1h",
+      });
+
+      return res.status(200).json({ user, token });
     } catch (err) {
       next(err);
     }

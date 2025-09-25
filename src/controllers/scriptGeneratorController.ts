@@ -127,28 +127,24 @@ async function fetchScript({
 // }
 
 async function getScriptVideo(script: string) {
-  //   const prompt = `You are an animation expert.
-  // Use the following script to create a visual meditation guide animation:
-  // "${script}". The video must:
-  // - Match the mood and feeling expressed in the script.`;
-
-  //   let operation = await ai.models.generateVideos({
-  //     model: "veo-3.0-generate-preview",
-  //     prompt,
-  //   });
-
-  //   while (!operation.done) {
-  //     await new Promise((r) => setTimeout(r, 10000));
-  //     operation = await ai.operations.getVideosOperation({ operation });
-  //   }
-
-  //   const videoUri = operation?.response?.generatedVideos?.[0]?.video?.uri;
-  //   if (!videoUri) return undefined;
-
-  //   const url = decodeURIComponent(videoUri);
-  //   const videoUriResponse = await fetch(`${url}&key=${apiKey}`);
-  // if (videoUri?.length > 0) return videoUriResponse?.url; // final playable URL
-  return "https://generativelanguage.googleapis.com/download/v1beta/files/9ojkq72px8eb:download?alt=media&key=AIzaSyBrsnbKgJLhEBRFKq0sC0ezVuap4SCuIqc";
+  const prompt = `You are an animation expert.
+  Use the following script to create a visual meditation guide animation:
+  "${script}". The video must:
+  - Match the mood and feeling expressed in the script.`;
+  let operation = await ai.models.generateVideos({
+    model: "veo-3.0-fastest-generate-preview",
+    prompt,
+  });
+  while (!operation.done) {
+    await new Promise((r) => setTimeout(r, 10000));
+    operation = await ai.operations.getVideosOperation({ operation });
+  }
+  const videoUri = operation?.response?.generatedVideos?.[0]?.video?.uri;
+  if (!videoUri) return undefined;
+  const url = decodeURIComponent(videoUri);
+  const videoUriResponse = await fetch(`${url}&key=${apiKey}`);
+  if (videoUri?.length > 0) return videoUriResponse?.url; // final playable URL
+  // return "https://generativelanguage.googleapis.com/download/v1beta/files/9ojkq72px8eb:download?alt=media&key=AIzaSyBrsnbKgJLhEBRFKq0sC0ezVuap4SCuIqc";
 }
 
 // export default class scriptGeneratorController {
