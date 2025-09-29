@@ -33,8 +33,8 @@ app.use(
 
 app.get("/api/health", (_req, res) => {
   console.log("HI");
-  res.status(200).json({ ok: true });
-  return "HI";
+  // res.status(200).json({ ok: true });
+  res.send({ message: "hello" });
 });
 
 /** ---- Routes ---- */
