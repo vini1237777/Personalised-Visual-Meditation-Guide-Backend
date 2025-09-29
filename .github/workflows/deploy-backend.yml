@@ -39,13 +39,13 @@ jobs:
         run: npm install
 
       - name: Create backend .env file
-        working-directory: ./backend
+        # working-directory: ./backend
         run: |
           touch .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Start backend with PM2
-        working-directory: ./backend
+        # working-directory: ./backend
         run: |
           /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start index.js --name backend
 
