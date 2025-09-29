@@ -22,28 +22,28 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
           # ✅ Match your actual path
-          cache-dependency-path: ../backend/package-lock.json
+          cache-dependency-path: ../services/backend/package-lock.json
 
       # ------------------------------
       # BACKEND SETUP
       # ------------------------------
       - name: Install backend dependencies
-        working-directory: ../backend
+        working-directory: ../services/backend
         run: npm ci
 
       - name: Create backend .env file
-        working-directory: ../backend
+        working-directory: ../services/backend
         run: |
           rm -f .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Build backend
-        working-directory: ../backend
+        working-directory: ../services/backend
         run: npm run build
 
       - name: Deploy with PM2 (reload if exists else start)
         shell: bash
-        working-directory: ../backend
+        working-directory: ../services/backend
         env:
           APP_NAME: backend
         run: |
@@ -54,7 +54,7 @@ jobs:
           if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
             pm2 reload "$APP_NAME"
           else
-            pm2 start dist/index.js --name "$APP_NAME"
+            pm2 start dist/server.js --name "$APP_NAME"
           fi
 
           # Optional but nice to have on a persistent runner:
