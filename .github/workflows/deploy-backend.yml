@@ -52,7 +52,7 @@ jobs:
 
       - name: Deploy/Restart PM2 Service
         run: |
-          cd ../backend/src || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start app.ts --name backend
+          cd ../backend/src || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start app.ts --name backend || pm2 start backend
 
       # # ------------------------------
       # # FRONTEND SETUP
