@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import "dotenv/config";
+import "dotenv/config";
 
 // ROUTES
 import { userRoutes } from "./routes/userRoutes";
@@ -13,6 +14,13 @@ const app = express();
 /** ---- Core middleware ---- */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const port = Number(process.env.PORT) || 3000;
+const host = process.env.HOST || "0.0.0.0/0";
+
+app.listen(port, host, () => {
+  console.log(`API listening on http://${host}:${port}`);
+});
 
 const allowedOrigins = [
   "http://localhost:3000",
