@@ -42,6 +42,4 @@ jobs:
       - name: Start backend with PM2
         working-directory: ./backend
         run: |
-          pm2 restart backend || /home/ubuntu/.nvm/versions/node/v24.8.0/bin/pm2 start index.js --name backend
-
-        # /home/ubuntu/.nvm/versions/node/v24.8.0/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v24.8.0/bin/pm2 start index.js --name backend
+          /home/ubuntu/.nvm/versions/node/v24.8.0/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v24.8.0/pm2 start index.js --name backend
