@@ -35,7 +35,7 @@ jobs:
       # BACKEND SETUP
       # ------------------------------
       - name: Install backend dependencies
-        working-directory: ./backend
+        # working-directory: ./backend
         run: npm install
 
       - name: Create backend .env file
