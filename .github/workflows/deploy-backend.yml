@@ -1,4 +1,4 @@
-name: Deploy Backend Node Js CI
+name: Deploy Backend (Node.js CI + SSM)
 
 on:
   workflow_dispatch:
@@ -16,65 +16,62 @@ permissions:
 env:
   AWS_REGION: ${{ vars.AWS_REGION }} # e.g. ap-south-1
   AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN_BACKEND }}
-  BACKEND_REPO: ${{ vars.BACKEND_REPO }} # owner/repo
-  BACKEND_REF: ${{ vars.BACKEND_REF }} # e.g. main
   BACKEND_BUILD_CMD: ${{ vars.BACKEND_BUILD_CMD }} # e.g. npm run build
-  BACKEND_ARTIFACT_DIR: ${{ vars.BACKEND_ARTIFACT_DIR }}# e.g. backend/dist
+  BACKEND_ARTIFACT_DIR: ${{ vars.BACKEND_ARTIFACT_DIR }} # e.g. services/backend/dist
   BACKEND_START_CMD: ${{ vars.BACKEND_START_CMD }} # e.g. PORT=3000 node dist/server.js
   PM2_APP_NAME: ${{ vars.PM2_APP_NAME }} # e.g. meditation-api
-  ARTIFACTS_BUCKET: ${{ secrets.ARTIFACTS_BUCKET }} # bucket name
+  ARTIFACTS_BUCKET: ${{ secrets.ARTIFACTS_BUCKET }} # bucket name (NOT arn)
   SSM_TARGET_TAG_KEY: ${{ secrets.SSM_TARGET_TAG_KEY }} # e.g. App
   SSM_TARGET_TAG_VALUE: ${{ secrets.SSM_TARGET_TAG_VALUE }} # e.g. backend
   ARTIFACT_KEY_PREFIX: backend/releases # keeps paths consistent
 
 jobs:
   deploy:
-    # TIP: make sure this matches your Environment name. Earlier you had "scripsEnv".
     environment: scriptsEnv
     runs-on: [self-hosted]
 
     strategy:
       matrix:
-        node-version: [20.x] # or 22.x/24.x; keep in sync with setup-node
+        node-version: [20.x] # keep in sync with your runtime
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout backend repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.BACKEND_REPO }}
-          ref: ${{ env.BACKEND_REF }}
-          path: backend
-          token: ${{ secrets.BACKEND_REPO_TOKEN }}
-
-      - name: Ensure prerequisites on runner (jq)
-        run: |
-          if ! command -v jq >/dev/null 2>&1; then
-            echo "jq not found. Install it on your self-hosted runner."
-            exit 1
-          fi
-
-      - uses: actions/setup-node@v4
+      # --- Node.js CI (from your Node.js CI workflow) ---
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
-          cache-dependency-path: "backend/package-lock.json"
+          cache: npm
+          cache-dependency-path: services/backend/package-lock.json
 
-      - name: Install + build
-        working-directory: backend
+      - name: Install deps
+        working-directory: services/backend
+        run: npm ci
+
+      - name: Build
+        working-directory: services/backend
         run: |
-          npm ci
-          ${BACKEND_BUILD_CMD}
+          if [ -n "${BACKEND_BUILD_CMD}" ]; then
+            ${BACKEND_BUILD_CMD}
+          else
+            npm run build
+          fi
 
+      # --- Package artifact ---
       - name: Package artifact
         run: |
+          set -euxo pipefail
           mkdir -p out
-          BUILD_DIR="${BACKEND_ARTIFACT_DIR:-backend/dist}"
+          BUILD_DIR="${BACKEND_ARTIFACT_DIR:-services/backend/dist}"
+
+          # Put runtime files you need on the instance next to dist:
+          # package.json + lockfile (so we can npm ci --omit=dev on the box)
           tar -czf "out/app-${GITHUB_SHA}.tgz" \
-            -C backend package.json package-lock.json \
+            -C services/backend package.json package-lock.json \
             -C "$BUILD_DIR" .
 
+      # --- Configure AWS via OIDC ---
       - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -83,15 +80,17 @@ jobs:
           audience: sts.amazonaws.com
           output-credentials: true
 
-      - name: Upload backend artifact to S3
+      - name: Upload artifact to S3
         run: |
+          set -euxo pipefail
           aws s3 cp "out/app-${GITHUB_SHA}.tgz" \
             "s3://${ARTIFACTS_BUCKET}/${ARTIFACT_KEY_PREFIX}/app-${GITHUB_SHA}.tgz"
 
       - name: Build SSM params JSON
         env:
-          ARTIFACT_S3_URI: s3://${{ vars.ARTIFACTS_BUCKET }}/${{ vars.ARTIFACT_KEY_PREFIX }}/app-${{ github.sha }}.tgz
+          ARTIFACT_S3_URI: s3://${{ env.ARTIFACTS_BUCKET }}/${{ env.ARTIFACT_KEY_PREFIX }}/app-${{ github.sha }}.tgz
         run: |
+          set -euxo pipefail
           cat > /tmp/deploy.tpl <<'BASH'
           set -euxo pipefail
           APP_DIR=/opt/myapp
@@ -99,30 +98,48 @@ jobs:
           PM2_APP_NAME="__PM2__"
           BACKEND_START_CMD="__START__"
 
+          # Ensure Node, AWS CLI, PM2 exist
           if ! command -v node >/dev/null 2>&1; then
-            curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
-            sudo dnf -y install nodejs git || sudo yum -y install nodejs git
+            if command -v dnf >/dev/null 2>&1; then
+              curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+              sudo dnf -y install nodejs git || true
+            else
+              curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+              sudo yum -y install nodejs git || true
+            fi
           fi
           if ! command -v aws >/dev/null 2>&1; then
-            sudo dnf -y install awscli || sudo yum -y install awscli
+            if command -v dnf >/dev/null 2>&1; then
+              sudo dnf -y install awscli || true
+            else
+              sudo yum -y install awscli || true
+            fi
           fi
           if ! command -v pm2 >/dev/null 2>&1; then
             sudo npm i -g pm2
+            # enable pm2 to resurrect on boot (Amazon Linux)
             sudo pm2 startup systemd -u ec2-user --hp /home/ec2-user || true
             sudo systemctl enable pm2-ec2-user || true
           fi
 
           sudo mkdir -p "$APP_DIR"
           sudo chown ec2-user:ec2-user "$APP_DIR"
+
+          # Fetch and unpack build
           aws s3 cp "$ART" /tmp/app.tgz
           tar -xzf /tmp/app.tgz -C "$APP_DIR"
+
           cd "$APP_DIR"
+          # prod deps only
           npm ci --omit=dev
+
+          # Start/restart with PM2 (explicit, no "bun" nonsense)
           if pm2 describe "$PM2_APP_NAME" >/dev/null 2>&1; then
             pm2 restart "$PM2_APP_NAME"
           else
             pm2 start --name "$PM2_APP_NAME" -- bash -lc "$BACKEND_START_CMD"
           fi
+
           pm2 save
           BASH
 
@@ -133,37 +150,8 @@ jobs:
 
       - name: Deploy to EC2 via SSM
         run: |
+          set -euxo pipefail
           aws ssm send-command --region "$AWS_REGION" \
             --document-name AWS-RunShellScript \
             --targets Key=tag:${SSM_TARGET_TAG_KEY},Values=${SSM_TARGET_TAG_VALUE} \
             --parameters file:///tmp/ssm-params.json
-
-  open_issue_on_failure:
-    needs: deploy
-    if: failure()
-    runs-on: [self-hosted]
-    permissions:
-      contents: read
-      issues: write
-    steps:
-      - name: Create issue with github-script (self-hosted friendly)
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const title = `Deploy failed: ${process.env.GITHUB_WORKFLOW} #${process.env.GITHUB_RUN_NUMBER} on ${process.env.GITHUB_REF_NAME}`;
-            const body = `
-            The **deploy** job failed.
-
-            - **Workflow:** ${process.env.GITHUB_WORKFLOW}
-            - **Run:** ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}
-            - **Commit:** ${process.env.GITHUB_SHA}
-
-            Please check the logs and fix the failing step.
-            `;
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title,
-              body
-            });
