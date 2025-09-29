@@ -2,8 +2,7 @@ name: Deploy Backend on EC2
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   deploy:
@@ -15,30 +14,48 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm"
-          cache-dependency-path: |
-            backend/package-lock.json
-            client/package-lock.json
+          cache: npm
+          # ✅ Match your actual path
+          cache-dependency-path: ../backend/package-lock.json
 
       # ------------------------------
       # BACKEND SETUP
       # ------------------------------
       - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm install
+        working-directory: ../backend
+        run: npm ci
 
       - name: Create backend .env file
-        working-directory: ./backend
+        working-directory: ../backend
         run: |
-          touch .env
+          rm -f .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
-      - name: Start backend with PM2
-        working-directory: ./backend
-        run: npm ci && npm run build || pm2 restart backend || pm2 start dist/index.js --name backend
+      - name: Build backend
+        working-directory: ../backend
+        run: npm run build
+
+      - name: Deploy with PM2 (reload if exists else start)
+        shell: bash
+        working-directory: ../backend
+        env:
+          APP_NAME: backend
+        run: |
+          # Ensure pm2 is available; if you installed it globally on the runner, skip the next line.
+          # npm i -g pm2
+
+          # If process exists, reload; otherwise start the compiled JS.
+          if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
+            pm2 reload "$APP_NAME"
+          else
+            pm2 start dist/index.js --name "$APP_NAME"
+          fi
+
+          # Optional but nice to have on a persistent runner:
+          pm2 save
