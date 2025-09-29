@@ -16,34 +16,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug workspace
+        run: |
+          pwd
+            ls -la
+            ls -la services || true
+            ls -la backend || true
+            cat backend/package.json || true
+            test -f backend/package-lock.json && echo "lockfile found" || echo "NO lockfile"
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
           # ✅ Match your actual path
-          cache-dependency-path: services/backend/package-lock.json
+          cache-dependency-path: backend/package-lock.json
+            services/backend/package-lock.json
+            '**/package-lock.json'
 
       # ------------------------------
       # BACKEND SETUP
       # ------------------------------
       - name: Install backend dependencies
-        working-directory: services/backend
+        working-directory: backend
         run: npm ci
 
       - name: Create backend .env file
-        working-directory: services/backend
+        working-directory: backend
         run: |
           rm -f .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Build backend
-        working-directory: services/backend
+        working-directory: backend
         run: npm run build
 
       - name: Deploy with PM2 (reload if exists else start)
         shell: bash
-        working-directory: services/backend
+        working-directory: backend
         env:
           APP_NAME: backend
         run: |
