@@ -1,5 +1,5 @@
 import "dotenv/config";
-import app from "./app";
+import app from "./src/app";
 
 const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || "0.0.0.0/0";
