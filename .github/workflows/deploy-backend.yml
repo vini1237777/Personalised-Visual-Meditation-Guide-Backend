@@ -45,9 +45,10 @@ jobs:
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Start backend with PM2
-        # working-directory: ./backend
+        working-directory: src/app.ts
         run: |
-          /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start index.js --name backend
+          /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start app.ts --name backend
+          || pm2 start backend
 
       # # ------------------------------
       # # FRONTEND SETUP
