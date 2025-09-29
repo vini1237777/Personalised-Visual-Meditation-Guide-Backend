@@ -18,10 +18,6 @@ app.use(express.urlencoded({ extended: true }));
 const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || "0.0.0.0/0";
 
-app.listen(port, host, () => {
-  console.log(`API listening on http://${host}:${port}`);
-});
-
 const allowedOrigins = [
   "http://localhost:3000",
   "https://d3jpf9la46kzt4.cloudfront.net/",
@@ -36,7 +32,9 @@ app.use(
 );
 
 app.get("/api/health", (_req, res) => {
+  console.log("HI");
   res.status(200).json({ ok: true });
+  return "HI";
 });
 
 /** ---- Routes ---- */
@@ -54,5 +52,9 @@ if (!mongoUri) {
     .then(() => console.log("Connected to MongoDB"))
     .catch((err) => console.error("Error connecting to MongoDB:", err));
 }
+
+app.listen(port, host, () => {
+  console.log(`API listening on http://${host}:${port}`);
+});
 
 export default app;
