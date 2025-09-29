@@ -1,8 +1,14 @@
-name: Deploy Backend on EC2
+name: Deploy Fullstack App on EC2
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
 
 jobs:
   deploy:
@@ -10,63 +16,63 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [24.x]
+        node-version: [22.x]
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Debug workspace
-        run: |
-          pwd
-            ls -la
-            ls -la services || true
-            ls -la backend || true
-            cat backend/package.json || true
-            test -f backend/package-lock.json && echo "lockfile found" || echo "NO lockfile"
+        uses: actions/checkout@v3
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
-          # ✅ Match your actual path
-          cache-dependency-path: backend/package-lock.json
-            services/backend/package-lock.json
-            '**/package-lock.json'
+          cache: "npm"
+          # cache-dependency-path: |
+          #   ./backend/package-lock.json
+          #   client/package-lock.json
 
       # ------------------------------
       # BACKEND SETUP
       # ------------------------------
       - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
+        working-directory: ./backend
+        run: npm install
 
       - name: Create backend .env file
-        working-directory: backend
+        working-directory: ./backend
         run: |
-          rm -f .env
+          touch .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
-      - name: Build backend
-        working-directory: backend
-        run: npm run build
-
-      - name: Deploy with PM2 (reload if exists else start)
-        shell: bash
-        working-directory: backend
-        env:
-          APP_NAME: backend
+      - name: Start backend with PM2
+        working-directory: ./backend
         run: |
-          # Ensure pm2 is available; if you installed it globally on the runner, skip the next line.
-          # npm i -g pm2
+          /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start index.js --name backend
 
-          # If process exists, reload; otherwise start the compiled JS.
-          if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
-            pm2 reload "$APP_NAME"
-          else
-            pm2 start dist/app.js --name "$APP_NAME"
-          fi
+      # # ------------------------------
+      # # FRONTEND SETUP
+      # # ------------------------------
+      # - name: Clean npm cache & remove existing dependencies
+      #   working-directory: ./client
+      #   run: |
+      #     rm -rf node_modules package-lock.json
+      #     npm cache clean --force
 
-          # Optional but nice to have on a persistent runner:
-          pm2 save
+      # - name: Install frontend dependencies
+      #   working-directory: ./client
+      #   run: npm install
+
+      # - name: Create frontend .env file
+      #   working-directory: ./client
+      #   run: |
+      #     touch .env
+      #     echo "${{ secrets.PROD_FRONTEND_ENV }}" > .env
+
+      # - name: Build frontend
+      #   working-directory: ./client
+      #   run: npm run build
+
+      # - name: Deploy frontend to Nginx
+      #   run: |
+      #     sudo rm -rf /var/www/html/*
+      #     sudo cp -r ./client/dist/* /var/www/html/
