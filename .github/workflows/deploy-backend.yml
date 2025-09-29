@@ -45,6 +45,9 @@ jobs:
           cache: npm
           cache-dependency-path: services/backend/package-lock.json
 
+      - run: npm ci
+      - run: pm2 restart
+
       - name: Install deps
         working-directory: services/backend
         run: npm ci
