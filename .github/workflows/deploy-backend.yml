@@ -1,81 +1,45 @@
-name: Deploy Backend Node Js CI
+name: Deploy Backend on EC2
 
 on:
-  workflow_dispatch:
   push:
-    branches: ["main"]
-    paths:
-      - "services/backend/**"
-      - ".github/workflows/**"
-
-permissions:
-  contents: read
-
-env:
-  SSH_HOST: ${{ secrets.SSH_HOST }} # your EC2 public DNS
-  SSH_USER: ${{ secrets.SSH_USER }} # ubuntu
-  SSH_PORT: ${{ secrets.SSH_PORT }} # usually 22
-  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-  PM2_APP_NAME: ${{ vars.PM2_APP_NAME }} # e.g. meditation-api
+    branches:
+      - main
 
 jobs:
   deploy:
-    environment: scriptsEnv
     runs-on: self-hosted
+
     strategy:
       matrix:
         node-version: [24.x]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
-          cache-dependency-path: services/backend/package-lock.json
+          cache: "npm"
+          cache-dependency-path: |
+            backend/package-lock.json
+            client/package-lock.json
 
-      - name: Install & Build
-        working-directory: services/backend
+      # ------------------------------
+      # BACKEND SETUP
+      # ------------------------------
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm install
+
+      - name: Create backend .env file
+        working-directory: ./backend
         run: |
-          npm ci
-          if [ -n "${BACKEND_BUILD_CMD}" ]; then
-            ${BACKEND_BUILD_CMD}
-          else
-            npm run build
-          fi
+          touch .env
+          echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
-          - name: Package artifact
-          run: |
-            mkdir -p out
-            BUILD_DIR="${BACKEND_ARTIFACT_DIR:-backend/dist}"
-            tar -czf "out/app-${GITHUB_SHA}.tgz" \
-              -C backend package.json package-lock.json \
-              -C "$BUILD_DIR" .
-
-      - name: Configure AWS (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.AWS_OIDC_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-          audience: sts.amazonaws.com
-          output-credentials: true
-
-      - name: Upload backend artifact to S3
+      - name: Start backend with PM2
+        working-directory: ./backend
         run: |
-          aws s3 cp "out/app-${GITHUB_SHA}.tgz" \
-            "s3://${ARTIFACTS_BUCKET}/${ARTIFACT_KEY_PREFIX}/app-${GITHUB_SHA}.tgz"
-
-      - name: Prepare SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-      - name: Restart PM2 on server
-        run: |
-          PORT="${SSH_PORT:-22}"
-          ssh -i ~/.ssh/deploy_key -p "$PORT" -o StrictHostKeyChecking=no \
-            "${SSH_USER}@${SSH_HOST}" \
-            "pm2 restart ${PM2_APP_NAME}"
+          /home/ubuntu/.nvm/versions/node/v24.8.0/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v24.8.0/bin/pm2 start index.js --name backend
