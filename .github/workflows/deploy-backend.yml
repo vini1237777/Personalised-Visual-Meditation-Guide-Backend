@@ -44,11 +44,15 @@ jobs:
           touch .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
-      - name: Start backend with PM2
-        working-directory: src/app.ts
+      # - name: Start backend with PM2
+      #   working-directory: src/app.ts
+      #   run: |
+      #     /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start app.ts --name backend
+      #     || pm2 start backend
+
+      - name: Deploy/Restart PM2 Service
         run: |
-          /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start app.ts --name backend
-          || pm2 start backend
+          cd backend/src || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start app.ts --name backend
 
       # # ------------------------------
       # # FRONTEND SETUP
