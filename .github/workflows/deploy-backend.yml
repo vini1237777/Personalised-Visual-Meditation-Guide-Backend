@@ -37,17 +37,17 @@ jobs:
       # BACKEND SETUP
       # ------------------------------
       - name: Install backend dependencies
-        working-directory: backend/src
+        working-directory: src
         run: npm install
 
       - name: Create backend .env file
-        working-directory: backend/src
+        working-directory: src
         run: |
           touch .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Deploy/Restart PM2 Service
-        working-directory: backend/src # <-- THIS IS THE CRITICAL FIX
+        working-directory: src # <-- THIS IS THE CRITICAL FIX
         run: |
           # Define the PM2 binary path once for clean code
           PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
