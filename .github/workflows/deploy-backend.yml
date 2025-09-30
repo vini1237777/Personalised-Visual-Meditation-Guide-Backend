@@ -14,8 +14,8 @@ jobs:
   deploy:
     runs-on: self-hosted
 
-    strategy:
-      matrix:
+  strategy:
+    matrix:
         node-version: [22.x]
 
     steps:
