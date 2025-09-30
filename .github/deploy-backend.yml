@@ -1,4 +1,4 @@
-name: Deploy Fullstack App on EC2
+name: Deploy Backend App on EC2
 
 on:
   push:
@@ -45,12 +45,6 @@ jobs:
         run: |
           touch .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
-
-      # - name: Start backend with PM2
-      #   working-directory: src/app.ts
-      #   run: |
-      #     /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 restart backend || /home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2 start app.ts --name backend
-      #     || pm2 start backend
 
       - name: Deploy/Restart PM2 Service
         working-directory: backend # <-- Set working directory to the parent folder
