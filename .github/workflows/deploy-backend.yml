@@ -53,19 +53,15 @@ jobs:
       #     || pm2 start backend
 
       - name: Deploy/Restart PM2 Service
-        # Set the working directory to the location of app.ts
-        working-directory: backend/src
+        working-directory: backend/dist # <-- Change working directory to compiled output
         run: |
-          # Define PM2 binary path
           PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
 
-          # 1. Attempt restart; if successful, the script ends here.
           $PM2_BIN restart backend 
 
-          # 2. Check the exit status of the previous command
           if [ $? -ne 0 ]; then
             echo "Backend process not found. Starting new service..."
-            $PM2_BIN start app.ts --name backend
+            $PM2_BIN start app.js --name backend # <-- Run 'app.js', not 'app.ts'
           fi
 
       # # ------------------------------
