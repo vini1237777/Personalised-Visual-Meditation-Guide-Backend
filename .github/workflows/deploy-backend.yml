@@ -49,8 +49,8 @@ jobs:
       - name: Deploy/Restart PM2 Service
         working-directory: src
         run: |
-          PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
-          $PM2_BIN restart backend || $PM2_BIN start dist/app.js --name backend
+          PM2_BIN=user/bin/pm2
+          $PM2_BIN restart backend || $PM2_BIN start dist/app.js --name backend ||  $PM2_BIN start backend
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
