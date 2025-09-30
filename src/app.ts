@@ -21,6 +21,7 @@ const host = process.env.HOST || "0.0.0.0/0";
 const allowedOrigins = [
   "http://localhost:3000",
   "https://d3jpf9la46kzt4.cloudfront.net/",
+  "http://ec2-54-86-123-45.compute-1.amazonaws.com",
 ];
 app.use(
   cors({
