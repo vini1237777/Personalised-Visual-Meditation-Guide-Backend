@@ -21,7 +21,7 @@ const host = process.env.HOST || "0.0.0.0/0";
 const allowedOrigins = [
   "http://localhost:3000",
   "https://d3jpf9la46kzt4.cloudfront.net/",
-  "http://ec2-54-86-123-45.compute-1.amazonaws.com",
+  "http://ec2-98-130-122-93.ap-south-2.compute.amazonaws.com",
 ];
 app.use(
   cors({
@@ -33,8 +33,6 @@ app.use(
 );
 
 app.get("/api/health", (_req, res) => {
-  console.log("HI");
-  // res.status(200).json({ ok: true });
   res.send({ message: "hello" });
 });
 
