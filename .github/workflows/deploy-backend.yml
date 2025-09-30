@@ -37,28 +37,24 @@ jobs:
       # BACKEND SETUP
       # ------------------------------
       - name: Install backend dependencies
-        # working-directory: ./backend
+        working-directory: backend/src
         run: npm install
 
       - name: Create backend .env file
-        # working-directory: ./backend
+        working-directory: backend/src
         run: |
           touch .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Deploy/Restart PM2 Service
-        working-directory: backend # <-- Set working directory to the parent folder
+        working-directory: backend/src # <-- THIS IS THE CRITICAL FIX
         run: |
-          PM2_BIN=/usr/bin/pm2
+          # Define the PM2 binary path once for clean code
+          PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
 
-          $PM2_BIN restart backend 
-
-          if [ $? -ne 0 ]; then
-            echo "Backend process not found. Starting new service..."
-            # Run the script using the full relative path from the working-directory
-            $PM2_BIN start dist/app.js --name backend
-          fi
-
+          # Try to restart 'backend'; if that fails (||) because it doesn't exist, start a new instance.
+          # Note: app.ts is a relative path because we are inside the 'backend/src' folder now.
+          $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
