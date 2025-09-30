@@ -14,10 +14,12 @@ jobs:
   deploy:
     runs-on: self-hosted
 
-  strategy:
-    matrix:
+    # Corrected indentation for strategy and matrix
+    strategy:
+      matrix:
         node-version: [22.x]
 
+    # Corrected indentation for steps
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -51,23 +53,20 @@ jobs:
       #     || pm2 start backend
 
       - name: Deploy/Restart PM2 Service
-      # Set the working directory to the location of app.ts
-        working-directory: backend/src 
+        # Set the working directory to the location of app.ts
+        working-directory: backend/src
         run: |
-            
-             PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
-    
-        # 1. Attempt restart; if successful, the script ends here.
-       $PM2_BIN restart backend 
-    
-      
-       if [ $? -ne 0 ]; then
-       echo "Backend process not found. Starting new service..."
-       $PM2_BIN start app.ts --name backend
-               fi
+          # Define PM2 binary path
+          PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
 
+          # 1. Attempt restart; if successful, the script ends here.
+          $PM2_BIN restart backend 
 
-               
+          # 2. Check the exit status of the previous command
+          if [ $? -ne 0 ]; then
+            echo "Backend process not found. Starting new service..."
+            $PM2_BIN start app.ts --name backend
+          fi
 
       # # ------------------------------
       # # FRONTEND SETUP
