@@ -53,18 +53,22 @@ jobs:
       #     || pm2 start backend
 
       - name: Deploy/Restart PM2 Service
-        working-directory: backend/src # <-- Still targeting the source directory
+        # Set the working directory to the compiled output (e.g., backend/dist)
+        working-directory: backend/dist
         run: |
-          PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
-          TS_NODE_BIN=$(which ts-node) # Get path to ts-node
+          # Define PM2 binary path using the stable system path
+          PM2_BIN=/usr/bin/pm2
 
+          # 1. Attempt restart
           $PM2_BIN restart backend 
 
+          # 2. Check the exit status of the previous command
           if [ $? -ne 0 ]; then
-           echo "Backend process not found. Starting new service..."
-           # Explicitly use ts-node as the interpreter for the .ts file
-           $PM2_BIN start app.ts --name backend --interpreter $TS_NODE_BIN
+            echo "Backend process not found. Starting new service..."
+            # Run the COMPILED JAVASCRIPT file
+            $PM2_BIN start app.js --name backend
           fi
+
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
