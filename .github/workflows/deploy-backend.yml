@@ -53,20 +53,16 @@ jobs:
       #     || pm2 start backend
 
       - name: Deploy/Restart PM2 Service
-        # Set the working directory to the compiled output (e.g., backend/dist)
-        working-directory: backend/dist
+        working-directory: backend # <-- Set working directory to the parent folder
         run: |
-          # Define PM2 binary path using the stable system path
           PM2_BIN=/usr/bin/pm2
 
-          # 1. Attempt restart
           $PM2_BIN restart backend 
 
-          # 2. Check the exit status of the previous command
           if [ $? -ne 0 ]; then
             echo "Backend process not found. Starting new service..."
-            # Run the COMPILED JAVASCRIPT file
-            $PM2_BIN start app.js --name backend
+            # Run the script using the full relative path from the working-directory
+            $PM2_BIN start dist/app.js --name backend
           fi
 
       # # ------------------------------
