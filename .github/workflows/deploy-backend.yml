@@ -53,7 +53,7 @@ jobs:
           PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
 
           # Attempt restart (dist/app.js is relative to the working-directory: backend/src)
-          $PM2_BIN restart backend || $PM2_BIN start dist/app.js --name backend
+          $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend --interpreter ts-node
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
