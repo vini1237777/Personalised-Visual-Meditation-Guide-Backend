@@ -47,14 +47,10 @@ jobs:
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Deploy/Restart PM2 Service
-        working-directory: src # <-- THIS IS THE CRITICAL FIX
+        working-directory: src
         run: |
-          # Define the PM2 binary path once for clean code
           PM2_BIN=/home/ubuntu/.nvm/versions/node/v22.16.0/user/bin/pm2
-
-          # Try to restart 'backend'; if that fails (||) because it doesn't exist, start a new instance.
-          # Note: app.ts is a relative path because we are inside the 'backend/src' folder now.
-          $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend
+          $PM2_BIN restart backend || $PM2_BIN start dist/app.js --name backend
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
