@@ -50,7 +50,7 @@ jobs:
         working-directory: dist
         run: |
           PM2_BIN=$(which pm2)      
-          $PM2_BIN restart app.js || $PM2_BIN start app.js
+          $PM2_BIN restart ./app.js || $PM2_BIN start ./app.js
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
