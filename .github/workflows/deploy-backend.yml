@@ -50,7 +50,9 @@ jobs:
         working-directory: src
         run: |
           PM2_BIN=$(which pm2)      
-          $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend --interpreter ts-node
+          $PM2_BIN restart backend
+
+      #|| $PM2_BIN start app.ts --name backend --interpreter ts-node
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
