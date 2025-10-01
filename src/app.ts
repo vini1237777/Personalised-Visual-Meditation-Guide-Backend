@@ -18,11 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || "0.0.0.0/0";
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:4000",
-  "http://ec2-98-130-122-93.ap-south-2.compute.amazonaws.com",
-];
+const allowedOrigins = ["http://localhost:3000", "http://localhost:4000"];
 app.use(
   cors({
     origin: allowedOrigins,
@@ -32,16 +28,10 @@ app.use(
   })
 );
 
-app.get("/api/health", (_req, res) => {
-  res.send({ message: "hello" });
-});
-
-/** ---- Routes ---- */
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/script", scriptRoutes);
 
-/** ---- MongoDB (do NOT throw; connect lazily) ---- */
 const mongoUri = process.env.MONGODB_URI;
 if (!mongoUri) {
   console.warn("MONGODB_URI is not set. API will run, DB will be DOWN.");
@@ -52,8 +42,8 @@ if (!mongoUri) {
     .catch((err) => console.error("Error connecting to MongoDB:", err));
 }
 
-app.listen(port, host, () => {
-  console.log(`API listening on http://${host}:${port}`);
+app.listen(port, () => {
+  console.log(`API listening on http://${host}`);
 });
 
 export default app;
