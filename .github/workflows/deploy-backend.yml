@@ -47,10 +47,10 @@ jobs:
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Deploy/Restart PM2 Service
-        working-directory: src
+        working-directory: dist
         run: |
           PM2_BIN=$(which pm2)      
-          $PM2_BIN restart dist/app.js || $PM2_BIN start dist/app.js
+          $PM2_BIN restart app.js || $PM2_BIN start app.js
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
