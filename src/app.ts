@@ -2,23 +2,19 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import "dotenv/config";
-import "dotenv/config";
 
-// ROUTES
 import { userRoutes } from "./routes/userRoutes";
 import { authRoutes } from "./routes/authRoutes";
 import { scriptRoutes } from "./routes/scriptGenerator";
 
 const app = express();
 
-/** ---- Core middleware ---- */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const port = Number(process.env.PORT) || 3000;
-const host = process.env.HOST || "0.0.0.0/0";
 
-const allowedOrigins = ["http://localhost:3000", "http://localhost:4000"];
+const allowedOrigins = ["http://localhost:3000/", "http://localhost:4000/"];
 app.use(
   cors({
     origin: allowedOrigins,
@@ -43,7 +39,7 @@ if (!mongoUri) {
 }
 
 app.listen(port, () => {
-  console.log(`API listening on http://${host}`);
+  console.log(`API listening on http://${port}.`);
 });
 
 export default app;
