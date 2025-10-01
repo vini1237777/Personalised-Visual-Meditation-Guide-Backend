@@ -54,7 +54,7 @@ jobs:
       #     touch .env
       #     echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
-      - name: Create frontend .env file
+      - name: Create backend .env file
         run: |
           echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
           echo "MONGODB_URI=${MONGODB_URI}" > .env
