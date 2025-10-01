@@ -20,7 +20,7 @@ const host = process.env.HOST || "0.0.0.0/0";
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://d3jpf9la46kzt4.cloudfront.net/",
+  "http://localhost:4000",
   "http://ec2-98-130-122-93.ap-south-2.compute.amazonaws.com",
 ];
 app.use(
