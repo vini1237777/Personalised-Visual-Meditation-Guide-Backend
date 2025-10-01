@@ -49,8 +49,9 @@ jobs:
       - name: Deploy/Restart PM2 Service
         working-directory: src
         run: |
-          PM2_BIN=$(which pm2)      
-          $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend --interpreter ts-node
+          PM2_BIN=$(which pm2)   
+          TS_NODE=$(which ts-node)   
+          $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend --interpreter $TS_NODE
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
