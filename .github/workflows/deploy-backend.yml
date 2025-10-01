@@ -37,20 +37,20 @@ jobs:
       # BACKEND SETUP
       # ------------------------------
       - name: Install backend dependencies
-        working-directory: backend
+        working-directory: src
         run: npm install
 
       - name: Create backend .env file
-        working-directory: backend
+        working-directory: src
         run: |
           touch .env
           echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
       - name: Deploy/Restart PM2 Service
-        working-directory: backend/dist
+        working-directory: dist
         run: |
           PM2_BIN=$(which pm2)      
-          $PM2_BIN restart ./app.js || $PM2_BIN start ./app.js
+          $PM2_BIN restart backend || $PM2_BIN start app.ts --interpreter ts-node
       # # ------------------------------
       # # FRONTEND SETUP
       # # ------------------------------
