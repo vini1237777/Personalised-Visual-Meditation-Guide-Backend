@@ -13,6 +13,14 @@ permissions:
 jobs:
   deploy:
     runs-on: self-hosted
+    environment: PROD_BACKEND_ENV
+    env:
+      OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
+      MONGODB_URI: ${{secrets.MONGODB_URI}}
+      PORT: ${{secrets.PORT}}
+      JWT_ACCESS_SECRET: ${{secrets.JWT_ACCESS_SECRET}}
+      GEMINI_API_KEY: ${{secrets.GEMINI_API_KEY}}
+      ACCESS_EXPIRES_IN: ${{secrets.ACCESS_EXPIRES_IN}}
 
     # Corrected indentation for strategy and matrix
     strategy:
@@ -40,11 +48,22 @@ jobs:
         working-directory: src
         run: npm install
 
-      - name: Create backend .env file
-        working-directory: src
+      # - name: Create backend .env file
+      #   working-directory: src
+      #   run: |
+      #     touch .env
+      #     echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
+
+      - name: Create frontend .env file
         run: |
-          touch .env
-          echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
+          echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
+          echo "MONGODB_URI=${MONGODB_URI}" > .env
+          echo "PORT=${PORT}" > .env
+          echo "JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}" > .env
+          echo "GEMINI_API_KEY=${GEMINI_API_KEY}" > .env
+          echo "ACCESS_EXPIRES_IN=${ACCESS_EXPIRES_IN}" > .env
+          echo "Created .env with:"
+          cat .env
 
       - name: Install ts-node (global)
         run: sudo npm install -g ts-node typescript
