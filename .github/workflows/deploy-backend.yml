@@ -74,30 +74,3 @@ jobs:
           PM2_BIN=$(which pm2)   
           TS_NODE=$(which ts-node)   
           $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend --interpreter $TS_NODE
-      # # ------------------------------
-      # # FRONTEND SETUP
-      # # ------------------------------
-      # - name: Clean npm cache & remove existing dependencies
-      #   working-directory: ./client
-      #   run: |
-      #     rm -rf node_modules package-lock.json
-      #     npm cache clean --force
-
-      # - name: Install frontend dependencies
-      #   working-directory: ./client
-      #   run: npm install
-
-      # - name: Create frontend .env file
-      #   working-directory: ./client
-      #   run: |
-      #     touch .env
-      #     echo "${{ secrets.PROD_FRONTEND_ENV }}" > .env
-
-      # - name: Build frontend
-      #   working-directory: ./client
-      #   run: npm run build
-
-      # - name: Deploy frontend to Nginx
-      #   run: |
-      #     sudo rm -rf /var/www/html/*
-      #     sudo cp -r ./client/dist/* /var/www/html/
