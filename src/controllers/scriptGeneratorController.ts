@@ -3,6 +3,7 @@ import scriptService from "../services/scriptService";
 import { GoogleGenAI } from "@google/genai";
 import { ChatOpenAI } from "@langchain/openai";
 import { promptVal } from "../lib/functions";
+// @ts-ignore: Unreachable code error
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import UserService from "../services/UserService";
 
