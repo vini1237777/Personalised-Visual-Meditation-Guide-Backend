@@ -34,7 +34,7 @@ app.use("/api/script", scriptRoutes);
 
 const mongoUri = process.env.MONGODB_URI;
 if (!mongoUri) {
-  console.warn("MONGODB_URI is not set. API will run, DB will be DOWN.");
+  console.log("MONGODB_URI is not set. API will run, DB will be DOWN.");
 } else {
   mongoose
     .connect(mongoUri, {})
@@ -43,7 +43,7 @@ if (!mongoUri) {
 }
 
 app.listen(port, () => {
-  console.log(`API listening on http://${port}.`);
+  console.log(`API listening on http://localhost:${port}`);
 });
 
 export default app;
