@@ -1,76 +1,76 @@
-name: Deploy Backend App on EC2
+# name: Deploy Backend App on EC2
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
-permissions:
-  id-token: write
-  contents: read
-  issues: write
+# permissions:
+#   id-token: write
+#   contents: read
+#   issues: write
 
-jobs:
-  deploy:
-    runs-on: self-hosted
-    environment: PROD_BACKEND_ENV
-    env:
-      OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
-      MONGODB_URI: ${{secrets.MONGODB_URI}}
-      PORT: ${{secrets.PORT}}
-      JWT_ACCESS_SECRET: ${{secrets.JWT_ACCESS_SECRET}}
-      GEMINI_API_KEY: ${{secrets.GEMINI_API_KEY}}
-      ACCESS_EXPIRES_IN: ${{secrets.ACCESS_EXPIRES_IN}}
+# jobs:
+#   deploy:
+#     runs-on: self-hosted
+#     environment: PROD_BACKEND_ENV
+#     env:
+#       OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
+#       MONGODB_URI: ${{secrets.MONGODB_URI}}
+#       PORT: ${{secrets.PORT}}
+#       JWT_ACCESS_SECRET: ${{secrets.JWT_ACCESS_SECRET}}
+#       GEMINI_API_KEY: ${{secrets.GEMINI_API_KEY}}
+#       ACCESS_EXPIRES_IN: ${{secrets.ACCESS_EXPIRES_IN}}
 
-    # Corrected indentation for strategy and matrix
-    strategy:
-      matrix:
-        node-version: [22.x]
+#     # Corrected indentation for strategy and matrix
+#     strategy:
+#       matrix:
+#         node-version: [22.x]
 
-    # Corrected indentation for steps
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+#     # Corrected indentation for steps
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: "npm"
-          # cache-dependency-path: |
-          #   ./backend/package-lock.json
-          #   client/package-lock.json
+#       - name: Use Node.js ${{ matrix.node-version }}
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: ${{ matrix.node-version }}
+#           cache: "npm"
+#           # cache-dependency-path: |
+#           #   ./backend/package-lock.json
+#           #   client/package-lock.json
 
-      # ------------------------------
-      # BACKEND SETUP
-      # ------------------------------
-      - name: Install backend dependencies
-        working-directory: src
-        run: npm install
+#       # ------------------------------
+#       # BACKEND SETUP
+#       # ------------------------------
+#       - name: Install backend dependencies
+#         working-directory: src
+#         run: npm install
 
-      # - name: Create backend .env file
-      #   working-directory: src
-      #   run: |
-      #     touch .env
-      #     echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
+#       # - name: Create backend .env file
+#       #   working-directory: src
+#       #   run: |
+#       #     touch .env
+#       #     echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
 
-      - name: Create backend .env file
-        run: |
-          echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
-          echo "MONGODB_URI=${MONGODB_URI}" > .env
-          echo "PORT=${PORT}" > .env
-          echo "JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}" > .env
-          echo "GEMINI_API_KEY=${GEMINI_API_KEY}" > .env
-          echo "ACCESS_EXPIRES_IN=${ACCESS_EXPIRES_IN}" > .env
-          echo "Created .env with:"
-          cat .env
+#       - name: Create backend .env file
+#         run: |
+#           echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
+#           echo "MONGODB_URI=${MONGODB_URI}" > .env
+#           echo "PORT=${PORT}" > .env
+#           echo "JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}" > .env
+#           echo "GEMINI_API_KEY=${GEMINI_API_KEY}" > .env
+#           echo "ACCESS_EXPIRES_IN=${ACCESS_EXPIRES_IN}" > .env
+#           echo "Created .env with:"
+#           cat .env
 
-      - name: Install ts-node (global)
-        run: sudo npm install -g ts-node typescript
+#       - name: Install ts-node (global)
+#         run: sudo npm install -g ts-node typescript
 
-      - name: Deploy/Restart PM2 Service
-        working-directory: src
-        run: |
-          PM2_BIN=$(which pm2)   
-          TS_NODE=$(which ts-node)   
-          $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend --interpreter $TS_NODE
+#       - name: Deploy/Restart PM2 Service
+#         working-directory: src
+#         run: |
+#           PM2_BIN=$(which pm2)
+#           TS_NODE=$(which ts-node)
+#           $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend --interpreter $TS_NODE
