@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 const port = Number(process.env.PORT) || 3000;
 
 const allowedOrigins = [
-  // "http://localhost:3000/",
+  "http://localhost:3000/",
   // "http://localhost:4000/",
   "http://16.112.14.253",
 ];
