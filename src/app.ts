@@ -16,7 +16,7 @@ const port = Number(process.env.PORT) || 3000;
 
 const allowedOrigins = [
   "http://localhost:3000/",
-  // "http://localhost:4000/",
+  "http://localhost:4000/",
   "http://16.112.14.253",
 ];
 app.use(
@@ -27,6 +27,14 @@ app.use(
     credentials: true,
   })
 );
+
+// app.use(
+//   cors({
+//     origin: ["http://localhost:4000", "http://localhost:3000"], // or '*', but be cautious with that in production
+//     methods: ["GET", "POST", "PUT", "DELETE"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//   })
+// );
 
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);

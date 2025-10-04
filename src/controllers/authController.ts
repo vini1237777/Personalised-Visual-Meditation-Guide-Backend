@@ -1,30 +1,38 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+// Removed unused bcrypt import
 import AuthService from "../services/authService";
+import userModel from "../models/userModel";
 
 const ACCESS_EXPIRES_IN = "1h";
 
 export default class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
-      const { fullName, email, password, id, roles } = req.body;
+      const { fullName, email, password } = req.body;
       if (!fullName || !email || !password) {
         return res.status(400).json({ error: "All fields are required" });
       }
 
-      const user = await AuthService.register({
+      const userData = await AuthService.register({
         fullName,
         email,
         password,
-        id,
-      });
-      const secret = process.env.JWT_ACCESS_SECRET!;
-      const token = jwt.sign({ sub: id, roles: roles }, secret, {
-        expiresIn: ACCESS_EXPIRES_IN,
       });
 
+      if (!userData) {
+        return res.status(500).json({ error: "User registration failed" });
+      }
+
+      const secret = process.env.JWT_ACCESS_SECRET!;
+      const token = jwt.sign(
+        { sub: userData.user.id, roles: userData.user.roles },
+        secret,
+        { expiresIn: ACCESS_EXPIRES_IN }
+      );
+
       return res.status(201).json({
-        ...user,
+        user: { ...userData.user },
         token,
       });
     } catch (err) {
@@ -34,34 +42,41 @@ export default class AuthController {
 
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, password, roles, id } = req.body;
-      const data = await AuthService.login({ email, password }); // throws on invalid
-      const secret = process.env.JWT_ACCESS_SECRET!;
-      const token = jwt.sign({ sub: id, roles }, secret, {
-        expiresIn: ACCESS_EXPIRES_IN,
-      });
-
-      return res.status(200).json({
-        data,
-        token,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  static async login1(req: Request, res: Response, next: NextFunction) {
-    try {
       const { email, password } = req.body;
-      const user = await AuthService.login({ email, password });
+
+      if (!email || !password) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      const userDoc = await userModel
+        .findOne({ email: normalizedEmail })
+        .select("+password")
+        .lean();
+
+      if (!userDoc || !userDoc.password) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+
+      const bcrypt = await import("bcrypt");
+      const isMatch = await bcrypt.compare(
+        String(password),
+        String(userDoc.password)
+      );
+
+      if (!isMatch) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
 
       const secret = process.env.JWT_ACCESS_SECRET!;
+      const token = jwt.sign(
+        { sub: userDoc._id, roles: userDoc.roles },
+        secret,
+        { expiresIn: ACCESS_EXPIRES_IN || "1h" }
+      );
 
-      const token = jwt.sign({ sub: user.id, roles: user.roles }, secret, {
-        expiresIn: ACCESS_EXPIRES_IN || "1h",
-      });
-
-      return res.status(200).json({ user, token });
+      return res.status(200).json({ token });
     } catch (err) {
       next(err);
     }

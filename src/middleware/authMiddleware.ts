@@ -1,10 +1,9 @@
-// src/middleware/auth.middleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 export interface JwtUser {
-  sub: string; // user id
-  roles?: string[]; // optional roles
+  sub: string;
+  roles?: string[];
   iat?: number;
   exp?: number;
 }
@@ -29,8 +28,7 @@ export function authMiddleware(
 
     const secret = process.env.JWT_ACCESS_SECRET!;
     const decoded = jwt.verify(token, secret) as JwtUser;
-    req.user = decoded; // attach user for downstream handlers
-    return next();
+    req.user = decoded;
   } catch {
     return res.status(401).json({ error: "Unauthorized" });
   }
