@@ -14,27 +14,14 @@ app.use(express.urlencoded({ extended: true }));
 
 const port = Number(process.env.PORT) || 3000;
 
-const allowedOrigins = [
-  "http://localhost:3000/",
-  // "http://localhost:4000/",
-  "http://16.112.14.253",
-];
 app.use(
   cors({
-    origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    origin: ["http://localhost:4000", "http://localhost:3000"], // or '*', but be cautious with that in production
+    methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
-
-// app.use(
-//   cors({
-//     origin: ["http://localhost:4000", "http://localhost:3000"], // or '*', but be cautious with that in production
-//     methods: ["GET", "POST", "PUT", "DELETE"],
-//     allowedHeaders: ["Content-Type", "Authorization"],
-//   })
-// );
 
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
