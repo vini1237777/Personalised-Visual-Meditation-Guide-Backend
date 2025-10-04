@@ -9,8 +9,8 @@ export class UserDao {
     return userModel.find({});
   }
 
-  static async update(id: any, payload: any) {
-    return userModel.findByIdAndUpdate({ _id: id }, payload, {
+  static async update(email: string, payload: any) {
+    return userModel.findOneAndUpdate({ email }, payload, {
       new: true,
     });
   }

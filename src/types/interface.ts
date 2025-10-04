@@ -3,7 +3,8 @@ export interface IUser {
   email: string;
   password: string;
   createdAt?: Date;
-  id: string;
+  id?: string;
+  roles?: string[];
 }
 
 export interface IObject {

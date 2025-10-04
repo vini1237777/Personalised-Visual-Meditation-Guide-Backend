@@ -13,7 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/genai": "^1.15.0",
+    "@google/genai": "^1.22.0",
+    "@langchain/core": "^0.3.78",
     "@langchain/openai": "^0.6.3",
     "@types/mongoose": "^5.11.96",
     "axios": "^1.11.0",
@@ -29,6 +30,7 @@
     "langchain": "^0.3.30",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.1",
+    "nvm": "^0.0.4",
     "openai": "^5.10.2",
     "react-toastify": "^11.0.5"
   },

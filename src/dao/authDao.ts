@@ -1,96 +1,67 @@
 import userModel from "../models/userModel";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 
 export class AuthDao {
   static async register({
     fullName,
     email,
     password,
-    id,
   }: {
     fullName: string;
     email: string;
     password: string;
-    id?: string;
   }) {
     try {
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const existing = await userModel.findOne({
+        email: email.toLowerCase().trim(),
+      });
+      if (existing) throw new Error("Email already in use");
+
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
 
       const newUser = new userModel({
-        fullName,
-        email,
+        fullName: fullName.trim(),
+        email: email.toLowerCase().trim(),
         password: hashedPassword,
       });
-      await newUser.save();
+
+      const saved = await newUser.save();
       return {
         message: "User registered successfully",
-        data: { fullName, email, id },
+        user: {
+          id: saved._id.toString(),
+          fullName: saved.fullName,
+          email: saved.email,
+          roles: saved.roles,
+        },
       };
-    } catch (error: any) {
-      throw new Error(error);
+    } catch (err: any) {
+      if (err?.code === 11000) throw new Error("Email already in use");
+      throw err;
     }
   }
 
-  // static async login({ email, password }: { email: string; password: string }) {
-  //   try {
-  //     console.log(email, "Auth dao login.......");
-
-  //     const user: any = await userModel.findOne({ email });
-
-  //     // console.log(password, user.password, "passwords");
-
-  //     // console.log(user, "user in login controller");
-
-  //     if (!user) throw new Error("User not found");
-  //     console.log(password, user.password, "login controller");
-  //     const isMatch = await bcrypt.compare(password, user.password);
-  //     if (!isMatch) throw new Error("Invalid credentials");
-
-  //     const jwtSecret = process.env.JWT_ACCESS_SECRET;
-  //     if (!jwtSecret || typeof jwtSecret !== "string") {
-  //       throw new Error("JWT secret key is not defined");
-  //     }
-  //     // console.log("JWT secret key is defined");
-  //     // console.log("User found and password matched");
-  //     // Generate JWT token
-  //     const token = jwt.sign({ userId: user?.id }, jwtSecret, {
-  //       expiresIn: "1h",
-  //     });
-
-  //     return {
-  //       message: "User loggedin successfully",
-  //       token,
-  //       user,
-  //     };
-  //   } catch (error: any) {
-  //     console.error("Error in login:", error);
-  //     if (
-  //       error.message === "User not found" ||
-  //       error.message === "Invalid credentials"
-  //     ) {
-  //       throw new Error(error.message);
-  //     }
-  //     throw new Error("Server error");
-  //   }
-  // }
-
   static async login({ email, password }: { email: string; password: string }) {
-    const userDoc = await userModel.findOne({ email }).lean(); // lean -> plain object
-    if (!userDoc) throw new Error("User not found");
+    const normalizedEmail = email.toLowerCase().trim();
 
-    const isMatch = await bcrypt.compare(password, userDoc.password);
+    const user = await userModel
+      .findOne({ email: normalizedEmail })
+      .select("+password");
+
+    if (!user) throw new Error("User not found");
+    if (!user.password) throw new Error("Invalid credentials");
+
+    const isMatch = await bcrypt.compare(password, user.password as string);
     if (!isMatch) throw new Error("Invalid credentials");
 
-    const { fullName, roles, _id, ...rest } = userDoc;
+    const { password: _pw, ...obj } = user.toObject();
 
-    const safeUser = {
-      id: _id ?? userDoc._id,
-      roles: roles ?? [],
-      fullName: fullName || undefined,
-      ...rest,
+    return {
+      id: obj._id.toString(),
+      fullName: obj.fullName,
+      email: obj.email,
+      roles: obj.roles ?? [],
     };
-
-    return safeUser;
   }
 }
