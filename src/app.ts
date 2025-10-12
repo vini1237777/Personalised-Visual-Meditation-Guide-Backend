@@ -22,7 +22,7 @@ app.use(
       "https://www.personalizedmeditate.in",
       "http://www.meditateaurelia.fit",
     ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
