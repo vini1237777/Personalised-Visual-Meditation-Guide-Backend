@@ -18,11 +18,9 @@ app.use(
   cors({
     origin: [
       "http://localhost:4000",
-      // "http://localhost:3000",
-      "https://www.personalizedmeditate.in",
-      "https://personalizedmeditate.in",
-      "http://www.meditateaurelia.fit",
-      "http://meditateaurelia.fit",
+      "http://localhost:3000",
+      "https://www.meditateaurelia.fit",
+      "https://meditateaurelia.fit",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
