@@ -59,7 +59,7 @@ async function fetchScript({
   try {
     return await createScript({ selectedFeelings, selectedEmojis });
   } catch (error: any) {
-    throw new Error(error?.message || "Failed to create script");
+    throw new Error("Failed to create script");
   }
 }
 
