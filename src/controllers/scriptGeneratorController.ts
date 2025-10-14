@@ -3,13 +3,15 @@ import scriptService from "../services/scriptService";
 import { GoogleGenAI } from "@google/genai";
 import { ChatOpenAI } from "@langchain/openai";
 import { promptVal } from "../lib/functions";
+import "dotenv/config";
+
 // @ts-ignore: Unreachable code error
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 
 const llmModel = new ChatOpenAI({
-  model: "gpt-4o-mini",
+  model: "gpt-4o",
   temperature: 0.7,
-  // openAIApiKey: process.env.OPENAI_API_KEY,
+  // apiKey: process.env.OPENAI_API_KEY,
 });
 
 const apiKey = process.env.GEMINI_API_KEY;
