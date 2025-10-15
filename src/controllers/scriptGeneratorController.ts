@@ -9,7 +9,7 @@ import "dotenv/config";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 
 const llmModel = new ChatOpenAI({
-  model: "gpt-4o",
+  model: "gpt-4o-mini",
   temperature: 0.7,
   // apiKey: process.env.OPENAI_API_KEY,
 });
@@ -38,6 +38,8 @@ export const createScript = async ({
     ),
     new HumanMessage(promptVal({ selectedFeelings, selectedEmojis })),
   ]);
+  console.log(msg, "..............msg");
+  console.log(msg.content, "..............msg.content");
   const content =
     typeof msg.content === "string"
       ? msg.content
@@ -59,6 +61,7 @@ async function fetchScript({
   try {
     return await createScript({ selectedFeelings, selectedEmojis });
   } catch (error: any) {
+    console.log(error, ".............error");
     throw new Error("Failed to create script");
   }
 }
@@ -69,7 +72,7 @@ async function getScriptVideo(script: string) {
   "${script}". The video must:
   - Match the mood and feeling expressed in the script.`;
   let operation = await ai.models.generateVideos({
-    model: "veo-3.0-generate-preview",
+    model: "veo-3.0-fast-generate-preview",
     prompt,
   });
   while (!operation.done) {
