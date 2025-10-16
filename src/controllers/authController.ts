@@ -76,7 +76,7 @@ export default class AuthController {
         { expiresIn: ACCESS_EXPIRES_IN || "1h" }
       );
 
-      return res.status(200).json({ token });
+      return res.status(200).json({ token, ...userDoc });
     } catch (err) {
       next(err);
     }
