@@ -38,8 +38,6 @@ export const createScript = async ({
     ),
     new HumanMessage(promptVal({ selectedFeelings, selectedEmojis })),
   ]);
-  console.log(msg, "..............msg");
-  console.log(msg.content, "..............msg.content");
   const content =
     typeof msg.content === "string"
       ? msg.content
@@ -61,7 +59,6 @@ async function fetchScript({
   try {
     return await createScript({ selectedFeelings, selectedEmojis });
   } catch (error: any) {
-    console.log(error, ".............error");
     throw new Error("Failed to create script");
   }
 }
@@ -72,7 +69,7 @@ async function getScriptVideo(script: string) {
   "${script}". The video must:
   - Match the mood and feeling expressed in the script.`;
   let operation = await ai.models.generateVideos({
-    model: "veo-3.0-fast-generate-preview",
+    model: "veo-3.1-generate-preview",
     prompt,
   });
   while (!operation.done) {
@@ -99,6 +96,7 @@ export default class scriptGeneratorController {
   ) {
     try {
       const { selectedFeelings, selectedEmojis, email } = req.body || {};
+
       if (!email) return res.status(400).json({ message: "Email is required" });
 
       const generatedScripts = await fetchScript({
