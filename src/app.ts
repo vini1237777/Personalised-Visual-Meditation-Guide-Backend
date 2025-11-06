@@ -42,8 +42,10 @@ if (!mongoUri) {
     .catch((err) => console.error("Error connecting to MongoDB:", err));
 }
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`API listening on http://localhost:${port}`);
 });
+
+server.setTimeout(0);
 
 export default app;
