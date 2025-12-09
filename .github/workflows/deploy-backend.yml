@@ -91,4 +91,5 @@ jobs:
 
             \$PM2_BIN restart meditation-backend || \$PM2_BIN start app.ts --name meditation-backend --interpreter \$TS_NODE
             \$PM2_BIN save
+            \$PM2_BIN startup
           EOF
