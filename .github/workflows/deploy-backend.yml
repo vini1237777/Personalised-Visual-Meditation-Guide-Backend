@@ -12,22 +12,21 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     environment: PROD_BACKEND_ENV
-    env:
-      OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
-      MONGODB_URI: ${{secrets.MONGODB_URI}}
-      PORT: ${{secrets.PORT}}
-      JWT_ACCESS_SECRET: ${{secrets.JWT_ACCESS_SECRET}}
-      GEMINI_API_KEY: ${{secrets.GEMINI_API_KEY}}
-      ACCESS_EXPIRES_IN: ${{secrets.ACCESS_EXPIRES_IN}}
 
-    # Corrected indentation for strategy and matrix
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      PORT: ${{ secrets.PORT }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ACCESS_EXPIRES_IN: ${{ secrets.ACCESS_EXPIRES_IN }}
+
     strategy:
       matrix:
         node-version: [22.x]
 
-    # Corrected indentation for steps
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -37,40 +36,50 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-          # cache-dependency-path: |
-          #   ./backend/package-lock.json
-          #   client/package-lock.json
 
-      # ------------------------------
-      # BACKEND SETUP
-      # ------------------------------
-      - name: Install backend dependencies
-        working-directory: src
-        run: npm install
-
-      # - name: Create backend .env file
-      #   working-directory: src
-      #   run: |
-      #     touch .env
-      #     echo "${{ secrets.PROD_BACKEND_ENV }}" > .env
-
-      - name: Create backend .env file
+      - name: Set up SSH to EC2
         run: |
-          echo "OPENAI_API_KEY=${OPENAI_API_KEY}" > .env
-          echo "MONGODB_URI=${MONGODB_URI}" > .env
-          echo "PORT=${PORT}" > .env
-          echo "JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}" > .env
-          echo "GEMINI_API_KEY=${GEMINI_API_KEY}" > .env
-          echo "ACCESS_EXPIRES_IN=${ACCESS_EXPIRES_IN}" > .env
-          echo "Created .env with:"
-          cat .env
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Install ts-node (global)
-        run: sudo npm install -g ts-node typescript
-
-      - name: Deploy/Restart PM2 Service
-        working-directory: src
+      - name: Deploy / Restart backend on EC2
         run: |
-          PM2_BIN=$(which pm2)
-          TS_NODE=$(which ts-node)
-          $PM2_BIN restart backend || $PM2_BIN start app.ts --name backend --interpreter $TS_NODE
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            set -e
+
+            # go to your backend folder on EC2
+            cd /var/www/meditation-backend/Personalised-Visual-Meditation-Guide-Backend
+
+            echo "Fetching latest code..."
+            git fetch --all
+            git reset --hard origin/main
+
+            echo "Creating .env file..."
+            cat > .env << EOT
+           OPENAI_API_KEY=${OPENAI_API_KEY}
+           MONGODB_URI=${MONGODB_URI}
+           PORT=${PORT}
+           JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+          GEMINI_API_KEY=${GEMINI_API_KEY}
+          ACCESS_EXPIRES_IN=${ACCESS_EXPIRES_IN}
+           EOT
+            echo "Created .env with:"
+            cat .env
+
+            echo "Installing backend dependencies..."
+            rm -rf node_modules package-lock.json
+            npm install
+
+            echo "Installing ts-node/typescript globally..."
+            sudo npm install -g ts-node typescript
+
+            echo "Starting / restarting PM2 service..."
+            cd src
+            PM2_BIN=\$(which pm2)
+            TS_NODE=\$(which ts-node)
+
+            \$PM2_BIN restart meditation-backend || \$PM2_BIN start app.ts --name meditation-backend --interpreter \$TS_NODE
+            \$PM2_BIN save
+          EOF

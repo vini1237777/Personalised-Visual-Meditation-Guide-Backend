@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-// Removed unused bcrypt import
 import AuthService from "../services/authService";
 import userModel from "../models/userModel";
 
@@ -9,7 +8,7 @@ const ACCESS_EXPIRES_IN = "1h";
 export default class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
-      const { fullName, email, password } = req.body;
+      const { fullName, email, password, confirmPassword } = req.body;
       if (!fullName || !email || !password) {
         return res.status(400).json({ error: "All fields are required" });
       }
@@ -18,6 +17,7 @@ export default class AuthController {
         fullName,
         email,
         password,
+        confirmPassword,
       });
 
       if (!userData) {
