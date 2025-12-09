@@ -77,8 +77,12 @@ jobs:
             rm -rf node_modules package-lock.json
             npm install
 
+
             echo "Installing ts-node/typescript globally..."
             sudo npm install -g ts-node typescript
+
+            npm run build
+
 
             echo "Starting / restarting PM2 service..."
             cd src
