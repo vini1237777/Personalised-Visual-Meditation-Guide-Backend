@@ -44,6 +44,11 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: SSH into EC2 and test connection
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/gh-ec2-ci \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+
       - name: Deploy / Restart backend on EC2
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
