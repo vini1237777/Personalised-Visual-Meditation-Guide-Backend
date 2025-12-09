@@ -1,4 +1,4 @@
-name: Deploy Backend App on EC2
+name: 🛠 Deploy Backend on EC2
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 permissions:
   id-token: write
   contents: read
-  issues: write
 
 jobs:
   deploy:
@@ -22,74 +21,58 @@ jobs:
       JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       ACCESS_EXPIRES_IN: ${{ secrets.ACCESS_EXPIRES_IN }}
-
-    strategy:
-      matrix:
-        node-version: [22.x]
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      REMOTE_PATH: /var/www/meditation-backend/Personalised-Visual-Meditation-Guide-Backend/
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: ⬇ Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - name: ⚙ Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: "npm"
+          node-version: "22.x"
+          cache: npm
 
-      - name: Set up SSH to EC2
+      - name: 🔑 Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/github_deploy_key
+          chmod 600 ~/.ssh/github_deploy_key
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
-      - name: SSH into EC2 and test connection
+      - name: 🧪 Test SSH connection
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/gh-ec2-ci \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+          ssh -i ~/.ssh/github_deploy_key $EC2_USER@$EC2_HOST "echo 'SSH Connected ✓'"
 
-      - name: Deploy / Restart backend on EC2
+      - name: 🚀 Deploy to EC2 using PM2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+          ssh -i ~/.ssh/github_deploy_key $EC2_USER@$EC2_HOST << 'EOF'
             set -e
+            cd /var/www/meditation-backend/Personalised-Visual-Meditation-Guide-Backend/
 
-            # go to your backend folder on EC2
-            cd /var/www/meditation-backend/Personalised-Visual-Meditation-Guide-Backend
-
-            echo "Fetching latest code..."
+            echo "📥 Fetching latest code..."
             git fetch --all
             git reset --hard origin/main
 
-            echo "Creating .env file..."
-            cat > .env << EOT
-           OPENAI_API_KEY=${OPENAI_API_KEY}
-           MONGODB_URI=${MONGODB_URI}
-           PORT=${PORT}
-           JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-          GEMINI_API_KEY=${GEMINI_API_KEY}
-          ACCESS_EXPIRES_IN=${ACCESS_EXPIRES_IN}
-           EOT
-            echo "Created .env with:"
-            cat .env
+            echo "📝 Updating .env ..."
+            cat > .env <<EOT
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
+            PORT=${{ secrets.PORT }}
+            JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }}
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            ACCESS_EXPIRES_IN=${{ secrets.ACCESS_EXPIRES_IN }}
+            EOT
 
-            echo "Installing backend dependencies..."
-            rm -rf node_modules package-lock.json
-            npm install
+            echo "📦 Installing dependencies..."
+            npm install --legacy-peer-deps
 
-
-            echo "Installing ts-node/typescript globally..."
-            sudo npm install -g ts-node typescript
-
+            echo "🏗 Building backend..."
             npm run build
 
-
-            echo "Starting / restarting PM2 service..."
-            cd src
-            PM2_BIN=\$(which pm2)
-            TS_NODE=\$(which ts-node)
-
-            \$PM2_BIN restart meditation-backend || \$PM2_BIN start app.ts --name meditation-backend --interpreter \$TS_NODE
-            \$PM2_BIN save
-            \$PM2_BIN startup
-          EOF
+            echo "🚦 Starting/Restarting PM2 service..."
+            pm2 restart meditation-backend || pm2 start dist/app.js --name meditation-backend
+            pm2 save
+            EOF
