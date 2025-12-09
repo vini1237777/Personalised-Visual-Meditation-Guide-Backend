@@ -73,6 +73,6 @@ jobs:
             npm run build
 
             echo "🚦 Starting/Restarting PM2 service..."
-            pm2 restart meditation-backend || pm2 start dist/app.js --name meditation-backend
+            pm2 restart meditation-backend || pm2 start app.ts --name meditation-backend
             pm2 save
             EOF
