@@ -13,15 +13,14 @@ export default class AuthController {
       if (!fullName || !email || !password) {
         return res.status(400).json({ error: "All fields are required" });
       }
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       const userData = await AuthService.register({
         fullName,
         email,
-        password,
-        confirmPassword,
+        password: hashedPassword,
+        confirmPassword: hashedPassword,
       });
-
-      const hashedPassword = await bcrypt.hash(password, 10);
 
       if (!userData) {
         return res.status(500).json({ error: "User registration failed" });
