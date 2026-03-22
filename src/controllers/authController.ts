@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import AuthService from "../services/authService";
 import userModel from "../models/userModel";
 
@@ -20,6 +21,8 @@ export default class AuthController {
         confirmPassword,
       });
 
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       if (!userData) {
         return res.status(500).json({ error: "User registration failed" });
       }
@@ -28,11 +31,11 @@ export default class AuthController {
       const token = jwt.sign(
         { sub: userData.user.id, roles: userData.user.roles },
         secret,
-        { expiresIn: ACCESS_EXPIRES_IN }
+        { expiresIn: ACCESS_EXPIRES_IN },
       );
 
       return res.status(201).json({
-        user: { ...userData.user },
+        user: { ...userData.user, password: hashedPassword },
         token,
       });
     } catch (err) {
@@ -59,10 +62,9 @@ export default class AuthController {
         return res.status(400).json({ message: "Invalid credentials" });
       }
 
-      const bcrypt = await import("bcrypt");
       const isMatch = await bcrypt.compare(
         String(password),
-        String(userDoc.password)
+        String(userDoc.password),
       );
 
       if (!isMatch) {
@@ -73,7 +75,7 @@ export default class AuthController {
       const token = jwt.sign(
         { sub: userDoc._id, roles: userDoc.roles },
         secret,
-        { expiresIn: ACCESS_EXPIRES_IN || "1h" }
+        { expiresIn: ACCESS_EXPIRES_IN || "1h" },
       );
 
       return res.status(200).json({ token, ...userDoc });
