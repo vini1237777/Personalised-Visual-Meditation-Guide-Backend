@@ -19,7 +19,7 @@ declare global {
 export function authMiddleware(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
     const header = req.headers.authorization || "";
@@ -29,6 +29,7 @@ export function authMiddleware(
     const secret = process.env.JWT_ACCESS_SECRET!;
     const decoded = jwt.verify(token, secret) as JwtUser;
     req.user = decoded;
+    next();
   } catch {
     return res.status(401).json({ error: "Unauthorized" });
   }
