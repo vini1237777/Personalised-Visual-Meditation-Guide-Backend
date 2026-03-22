@@ -24,7 +24,11 @@ export default class userController {
     try {
       const payload = req.body;
       const id = req.params.id;
-      if (req.user.sub === req.params.id || req.user.roles?.includes("admin")) {
+
+      const isAdmin = req.user.roles?.includes("admin");
+      const isOwner = req.user.sub === req.params.id;
+
+      if (isOwner || isAdmin) {
         const event = await UserService.update(id, payload);
         return res.status(200).send({ event });
       } else {
