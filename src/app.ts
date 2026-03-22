@@ -6,6 +6,7 @@ import "dotenv/config";
 import { userRoutes } from "./routes/userRoutes";
 import { authRoutes } from "./routes/authRoutes";
 import { scriptRoutes } from "./routes/scriptGenerator";
+import helmet from "helmet";
 
 const app = express();
 
@@ -13,6 +14,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const port = Number(process.env.PORT) || 3000;
+
+app.use(helmet());
 
 app.use(
   cors({
@@ -25,7 +28,7 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  })
+  }),
 );
 
 app.use("/api/user", userRoutes);
