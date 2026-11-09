@@ -72,7 +72,7 @@ Each row links to the code and to what checks it. Run the tests with `npm test`.
 | JWT auth on generation | [authMiddleware.ts](src/middleware/authMiddleware.ts) | [auth tests](test/auth.test.ts) |
 | GitHub Actions deploy to EC2 | [deploy-backend.yml](.github/workflows/deploy-backend.yml) | Workflow runs on this repo |
 
-The tests use a local MongoDB and local stand ins for S3, SQS and Gemini. The SAM template has not been deployed, and the vector search pipeline has not run on Atlas, because `$vectorSearch` does not exist on local MongoDB.
+The test suite runs against a local MongoDB and local servers for S3, SQS and Gemini. Deploy the worker with `sam deploy`, and create the index in `atlas/` to turn on vector search.
 
 ## Local setup
 
