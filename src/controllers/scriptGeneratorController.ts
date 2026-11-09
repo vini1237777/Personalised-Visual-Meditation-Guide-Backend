@@ -1,139 +1,141 @@
 import express from "express";
-import scriptService from "../services/scriptService";
-import { GoogleGenAI } from "@google/genai";
-import { ChatOpenAI } from "@langchain/openai";
-import { promptVal } from "../lib/functions";
+import mongoose from "mongoose";
+import { UserDao } from "../dao/userDao";
+import { isValidFileId, streamVeoVideo } from "../lib/geminiVideo";
+import { enqueueJob, isQueueEnabled } from "../lib/jobQueue";
 import {
-  fileIdFromVeoUri,
-  isValidFileId,
-  streamVeoVideo,
-  videoPath,
-} from "../lib/geminiVideo";
-import "dotenv/config";
-
-// @ts-ignore: Unreachable code error
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-
-const llmModel = new ChatOpenAI({
-  model: "gpt-4o-mini",
-  temperature: 0.7,
-  // apiKey: process.env.OPENAI_API_KEY,
-});
-
-const apiKey = process.env.GEMINI_API_KEY;
-
-if (!apiKey) {
-  throw new Error("Missing GEMINI_API_KEY environment variable");
-}
-
-const ai = new GoogleGenAI({
-  vertexai: false,
-  apiKey: `${process.env.GEMINI_API_KEY}`,
-});
-
-export const createScript = async ({
-  selectedFeelings,
-  selectedEmojis,
-}: {
-  selectedFeelings: string[];
-  selectedEmojis: any;
-}) => {
-  const msg = await llmModel.invoke([
-    new SystemMessage(
-      "You are a helpful assistant that always replies in English."
-    ),
-    new HumanMessage(promptVal({ selectedFeelings, selectedEmojis })),
-  ]);
-  const content =
-    typeof msg.content === "string"
-      ? msg.content
-      : Array.isArray(msg.content)
-      ? msg.content
-          .map((c: any) => (typeof c === "string" ? c : c?.text ?? ""))
-          .join("\n")
-      : String(msg.content ?? "");
-  return content.trim();
-};
-
-async function fetchScript({
-  selectedFeelings,
-  selectedEmojis,
-}: {
-  selectedFeelings: string[];
-  selectedEmojis: any;
-}) {
-  try {
-    return await createScript({ selectedFeelings, selectedEmojis });
-  } catch (error: any) {
-    throw new Error("Failed to create script");
-  }
-}
-
-const VEO_POLL_MS = 10_000;
-const VEO_TIME_LIMIT_MS = 6 * 60 * 1000;
+  isS3Enabled,
+  LINK_EXPIRES_SECONDS,
+  presignVideo,
+} from "../lib/videoStorage";
+import GenerationJob from "../models/generationJobModel";
+import { findActiveJob, runJob } from "../services/jobRunner";
+import { generateMeditation } from "../services/meditationGenerator";
+import { sessionMemory } from "../services/sessionMemory";
 
 function publicApiUrl(req: express.Request) {
   return process.env.PUBLIC_API_URL || `${req.protocol}://${req.get("host")}`;
 }
 
-async function getScriptVideoFileId(script: string) {
-  const prompt = `You are an animation expert.
-  Use the following script to create a visual meditation guide animation:
-  "${script}". The video must:
-  - Match the mood and feeling expressed in the script.`;
-  let operation = await ai.models.generateVideos({
-    model: "veo-3.1-generate-preview",
-    prompt,
-  });
-  const deadline = Date.now() + VEO_TIME_LIMIT_MS;
-  while (!operation.done) {
-    if (Date.now() > deadline) throw new Error("Video generation timed out");
-    await new Promise((r) => setTimeout(r, VEO_POLL_MS));
-    operation = await ai.operations.getVideosOperation({ operation });
-  }
-  const videoUri = operation?.response?.generatedVideos?.[0]?.video?.uri;
-  if (!videoUri) return null;
-
-  const fileId = fileIdFromVeoUri(videoUri);
-  if (!fileId) throw new Error("Unexpected video link from Veo");
-  return fileId;
+// Without a queue the job runs in this process, so local development needs no AWS.
+async function startJob(jobId: string) {
+  if (isQueueEnabled()) return enqueueJob(jobId);
+  runJob(jobId, generateMeditation).catch((err) =>
+    console.error(`Job ${jobId} crashed:`, err.message),
+  );
 }
 
 export default class scriptGeneratorController {
+  // Links expire, so a signed in user can ask for a new one to their own video.
+  static async getVideoLink(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) {
+    try {
+      const user = await UserDao.getById(String(req.user?.sub));
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+      if (!user.videoKey || !isS3Enabled()) {
+        return res.status(404).json({ message: "No saved video" });
+      }
+      return res.status(200).json({
+        videoUrl: await presignVideo(user.videoKey),
+        expiresInSeconds: LINK_EXPIRES_SECONDS,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async getScript(
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    next: express.NextFunction,
   ) {
     try {
-      const { selectedFeelings, selectedEmojis, email } = req.body || {};
+      const { selectedFeelings, selectedEmojis } = req.body;
 
-      if (!email) return res.status(400).json({ message: "Email is required" });
+      // Whoever holds the token owns this job, whatever email is sent.
+      const user = await UserDao.getById(String(req.user?.sub));
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+      const userId = String(user._id);
 
-      const generatedScripts = await fetchScript({
+      // Each job pays for a video, so a repeat click joins the one in progress.
+      const active = await findActiveJob(userId);
+      if (active) return res.status(202).json({ jobId: String(active._id) });
+
+      const job = await GenerationJob.create({
+        userId,
         selectedFeelings,
         selectedEmojis,
+        apiUrl: publicApiUrl(req),
       });
+      const jobId = String(job._id);
 
-      if (!generatedScripts) {
-        return res.status(502).json({ message: "Script generation failed" });
+      try {
+        await startJob(jobId);
+      } catch (err) {
+        console.error(`Queueing job ${jobId} failed:`, (err as Error).message);
+        await GenerationJob.updateOne({ _id: jobId }, { status: "failed" });
+        return res
+          .status(503)
+          .json({ message: "Could not start generation. Please try again." });
       }
 
-      const fileId = await getScriptVideoFileId(generatedScripts);
-      const videoUrl = fileId ? `${publicApiUrl(req)}${videoPath(fileId)}` : "";
+      return res.status(202).json({ jobId });
+    } catch (err) {
+      next(err);
+    }
+  }
 
-      await scriptService.getScript({
-        selectedFeelings,
-        selectedEmojis,
-        email,
-        generatedScripts,
-        videoUrl,
-      });
+  static async getJob(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) {
+    try {
+      const jobId = String(req.params.jobId ?? "");
+      // Someone else's job looks the same as one that does not exist.
+      const job = mongoose.isValidObjectId(jobId)
+        ? await GenerationJob.findOne({
+            _id: jobId,
+            userId: String(req.user?.sub),
+          })
+        : null;
+      if (!job) return res.status(404).json({ message: "Job not found" });
 
-      return res.status(200).json({
-        generatedScripts,
-        videoUrl,
+      if (job.status !== "done") return res.json({ status: job.status });
+
+      return res.json({
+        status: job.status,
+        generatedScripts: job.generatedScripts,
+        reused: Boolean(job.reused),
+        videoUrl: job.videoKey
+          ? await presignVideo(job.videoKey)
+          : (job.videoUrl ?? ""),
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getSimilarSessions(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) {
+    try {
+      const closest = await sessionMemory.findClosest(
+        String(req.user?.sub),
+        req.body,
+      );
+      const sessions = await Promise.all(
+        closest.map(async ({ videoKey, ...session }) => ({
+          ...session,
+          videoUrl: await presignVideo(videoKey),
+        })),
+      );
+      return res.json({ sessions });
     } catch (err) {
       next(err);
     }
@@ -148,7 +150,7 @@ export default class scriptGeneratorController {
       fileId,
       range: req.headers.range,
       res,
-      apiKey: apiKey as string,
+      apiKey: process.env.GEMINI_API_KEY as string,
     });
   }
 }

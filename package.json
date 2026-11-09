@@ -13,6 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1164.0",
+    "@aws-sdk/client-sqs": "^3.1164.0",
+    "@aws-sdk/lib-storage": "^3.1164.0",
+    "@aws-sdk/s3-request-presigner": "^3.1164.0",
     "@google/genai": "^1.22.0",
     "@langchain/core": "^0.3.78",
     "@langchain/openai": "^0.6.3",
@@ -37,6 +41,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.164",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
@@ -44,6 +49,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.5.2",
     "@types/node-fetch": "^2.6.13",
+    "esbuild": "^0.28.2",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",

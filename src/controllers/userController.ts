@@ -1,5 +1,6 @@
 import express from "express";
 import UserService from "../services/UserService";
+import { updateUserSchema } from "../validators/authValidator";
 
 export default class userController {
   static async get(
@@ -8,8 +9,8 @@ export default class userController {
     next: express.NextFunction,
   ) {
     try {
-      const email = req.body.email;
-      const events = await UserService.getByEmail(email);
+      // The token decides who this is, never the request.
+      const events = await UserService.getById(String(req.user?.sub));
 
       return res.status(200).send({ events });
     } catch (err) {
@@ -22,7 +23,11 @@ export default class userController {
     next: express.NextFunction,
   ) {
     try {
-      const payload = req.body;
+      const parsed = updateUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid update" });
+      }
+      const payload = parsed.data;
       const id = req.params.id;
 
       const isAdmin = req.user.roles?.includes("admin");
