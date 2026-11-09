@@ -18,6 +18,8 @@ const generationJobSchema = new mongoose.Schema(
     generatedScripts: { type: String },
     videoKey: { type: String },
     videoUrl: { type: String },
+    // True when generation failed and this is the user's closest saved session.
+    reused: { type: Boolean },
     createdAt: { type: Date, default: Date.now, expires: SEVEN_DAYS_SECONDS },
   },
   { versionKey: false },

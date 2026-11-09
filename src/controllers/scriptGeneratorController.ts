@@ -11,6 +11,7 @@ import {
 import GenerationJob from "../models/generationJobModel";
 import { findActiveJob, runJob } from "../services/jobRunner";
 import { generateMeditation } from "../services/meditationGenerator";
+import { sessionMemory } from "../services/sessionMemory";
 
 function publicApiUrl(req: express.Request) {
   return process.env.PUBLIC_API_URL || `${req.protocol}://${req.get("host")}`;
@@ -108,10 +109,33 @@ export default class scriptGeneratorController {
       return res.json({
         status: job.status,
         generatedScripts: job.generatedScripts,
+        reused: Boolean(job.reused),
         videoUrl: job.videoKey
           ? await presignVideo(job.videoKey)
           : (job.videoUrl ?? ""),
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getSimilarSessions(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) {
+    try {
+      const closest = await sessionMemory.findClosest(
+        String(req.user?.sub),
+        req.body,
+      );
+      const sessions = await Promise.all(
+        closest.map(async ({ videoKey, ...session }) => ({
+          ...session,
+          videoUrl: await presignVideo(videoKey),
+        })),
+      );
+      return res.json({ sessions });
     } catch (err) {
       next(err);
     }
