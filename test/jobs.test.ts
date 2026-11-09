@@ -10,6 +10,7 @@ import { after, before, beforeEach, describe, test } from "node:test";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import type { SQSEvent } from "aws-lambda";
+import { canGenerate } from "../src/lib/generationAccess";
 import type { GenerationResult } from "../src/services/meditationGenerator";
 
 // A throwaway local MongoDB and a stub queue. No AI service is reached: generation
@@ -29,6 +30,7 @@ let sent: string[] = [];
 let queueBroken = false;
 let aliceId: string;
 let bobId: string;
+let carolId: string;
 let GenerationJob: typeof import("../src/models/generationJobModel").default;
 let User: typeof import("../src/models/userModel").default;
 let runJob: typeof import("../src/services/jobRunner").runJob;
@@ -110,12 +112,14 @@ before(async () => {
   ({ runJob } = await import("../src/services/jobRunner"));
   ({ createHandler } = await import("../src/lambda/createHandler"));
 
-  const [alice, bob] = await User.create([
+  const [alice, bob, carol] = await User.create([
     { fullName: "Alice", email: "alice@example.com", password: "x".repeat(12) },
     { fullName: "Bob", email: "bob@example.com", password: "x".repeat(12) },
+    { fullName: "Carol", email: "carol@example.com", password: "x".repeat(12) },
   ]);
   aliceId = String(alice!._id);
   bobId = String(bob!._id);
+  carolId = String(carol!._id);
 
   queue = http.createServer((req, res) => {
     let raw = "";
@@ -149,6 +153,7 @@ before(async () => {
       JWT_ACCESS_SECRET: SECRET,
       GEMINI_API_KEY: "not-used",
       OPENAI_API_KEY: "not-used",
+      GENERATION_ALLOWED_EMAILS: " ALICE@example.com , bob@example.com ",
       SQS_QUEUE_URL: `http://127.0.0.1:${queuePort}/000000000000/jobs`,
       S3_VIDEO_BUCKET: "soulsync-videos",
       AWS_REGION: "ap-south-1",
@@ -176,6 +181,49 @@ after(async () => {
   await mongoose.disconnect();
   mongod?.kill("SIGKILL");
   fs.rmSync(dbPath, { recursive: true, force: true });
+});
+
+describe("who can start a generation", () => {
+  test("an email on the list starts a job, whatever its case", async () => {
+    const res = await post(aliceId);
+    assert.equal(res.status, 202);
+    assert.equal(sent.length, 1);
+  });
+
+  test("an email off the list starts nothing", async () => {
+    const res = await post(carolId);
+    assert.equal(res.status, 403);
+    assert.equal(await GenerationJob.countDocuments(), 0);
+    assert.equal(sent.length, 0);
+  });
+
+  test("an allowed email in the body does not help", async () => {
+    const res = await fetch(`${BASE}/api/script/post`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${tokenFor(carolId)}`,
+      },
+      body: JSON.stringify({ ...request, email: "alice@example.com" }),
+    });
+    assert.equal(res.status, 403);
+    assert.equal(await GenerationJob.countDocuments(), 0);
+  });
+
+  test("with no list set nobody is allowed", async () => {
+    const before = process.env.GENERATION_ALLOWED_EMAILS;
+    try {
+      for (const list of [undefined, "", " , "]) {
+        if (list === undefined) delete process.env.GENERATION_ALLOWED_EMAILS;
+        else process.env.GENERATION_ALLOWED_EMAILS = list;
+        assert.equal(canGenerate("alice@example.com"), false);
+        assert.equal(canGenerate(""), false);
+      }
+    } finally {
+      if (before === undefined) delete process.env.GENERATION_ALLOWED_EMAILS;
+      else process.env.GENERATION_ALLOWED_EMAILS = before;
+    }
+  });
 });
 
 describe("delivering a job more than once", () => {
