@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import AuthService from "../services/authService";
 import userModel from "../models/userModel";
+import { canGenerate } from "../lib/generationAccess";
 
 const ACCESS_EXPIRES_IN = "1h";
 
@@ -12,6 +13,13 @@ export default class AuthController {
       const { fullName, email, password } = req.body;
       if (!fullName || !email || !password) {
         return res.status(400).json({ error: "All fields are required" });
+      }
+      // New accounts follow the same list as paid generation.
+      if (!canGenerate(email)) {
+        return res.status(403).json({
+          message:
+            "New accounts are invite only. Try SoulSync with the demo account on the login page.",
+        });
       }
       const userData = await AuthService.register({
         fullName,
