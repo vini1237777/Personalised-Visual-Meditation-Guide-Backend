@@ -12,6 +12,11 @@ router.post(
   validateRequest(generateSchema),
   scriptGeneratorController.getScript,
 );
+router.get(
+  "/video-link",
+  authMiddleware,
+  scriptGeneratorController.getVideoLink,
+);
 router.get("/video/:fileId", scriptGeneratorController.streamVideo);
 
 export const scriptRoutes = router;
