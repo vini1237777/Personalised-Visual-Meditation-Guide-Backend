@@ -5,7 +5,7 @@ export interface IUser {
   createdAt?: Date;
   id?: string;
   roles?: string[];
-  confirmPassword: string;
+  confirmPassword?: string;
 }
 
 export interface IObject {

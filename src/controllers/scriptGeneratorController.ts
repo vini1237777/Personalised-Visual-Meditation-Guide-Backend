@@ -1,5 +1,6 @@
 import express from "express";
 import scriptService from "../services/scriptService";
+import { UserDao } from "../dao/userDao";
 import { GoogleGenAI } from "@google/genai";
 import { ChatOpenAI } from "@langchain/openai";
 import { promptVal } from "../lib/functions";
@@ -106,9 +107,12 @@ export default class scriptGeneratorController {
     next: express.NextFunction
   ) {
     try {
-      const { selectedFeelings, selectedEmojis, email } = req.body || {};
+      const { selectedFeelings, selectedEmojis } = req.body;
 
-      if (!email) return res.status(400).json({ message: "Email is required" });
+      // Whoever holds the token owns this session, whatever email is sent.
+      const user = await UserDao.getById(String(req.user?.sub));
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+      const { email } = user;
 
       const generatedScripts = await fetchScript({
         selectedFeelings,
