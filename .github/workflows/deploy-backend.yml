@@ -69,6 +69,7 @@ jobs:
           AWS_REGION=${{ secrets.AWS_REGION }}
           SQS_QUEUE_URL=${{ secrets.SQS_QUEUE_URL }}
           VECTOR_SEARCH=${{ secrets.VECTOR_SEARCH }}
+          GENERATION_ALLOWED_EMAILS=${{ secrets.GENERATION_ALLOWED_EMAILS }}
           EOT
 
           echo "📦 Installing dependencies..."
