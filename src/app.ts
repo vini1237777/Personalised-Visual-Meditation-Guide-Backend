@@ -6,9 +6,13 @@ import "dotenv/config";
 import { userRoutes } from "./routes/userRoutes";
 import { authRoutes } from "./routes/authRoutes";
 import { scriptRoutes } from "./routes/scriptGenerator";
+import { visitRoutes } from "./routes/visitRoutes";
 import helmet from "helmet";
 
 const app = express();
+
+// Nginx sits in front, so the visitor address comes from its forwarded header.
+app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -34,6 +38,7 @@ app.use(
 app.use("/api/user", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/script", scriptRoutes);
+app.use("/api/visits", visitRoutes);
 
 const mongoUri = process.env.MONGODB_URI;
 if (!mongoUri) {
