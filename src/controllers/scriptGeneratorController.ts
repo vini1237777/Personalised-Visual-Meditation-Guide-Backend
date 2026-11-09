@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import { UserDao } from "../dao/userDao";
+import { canGenerate } from "../lib/generationAccess";
 import { isValidFileId, streamVeoVideo } from "../lib/geminiVideo";
 import { enqueueJob, isQueueEnabled } from "../lib/jobQueue";
 import {
@@ -58,6 +59,11 @@ export default class scriptGeneratorController {
       // Whoever holds the token owns this job, whatever email is sent.
       const user = await UserDao.getById(String(req.user?.sub));
       if (!user) return res.status(401).json({ error: "Unauthorized" });
+      if (!canGenerate(user.email)) {
+        return res
+          .status(403)
+          .json({ message: "Live generation is not available on this account" });
+      }
       const userId = String(user._id);
 
       // Each job pays for a video, so a repeat click joins the one in progress.

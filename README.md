@@ -98,6 +98,9 @@ S3_VIDEO_BUCKET=
 AWS_REGION=ap-south-1
 SQS_QUEUE_URL=
 VECTOR_SEARCH=off
+
+# Comma separated emails that can start a paid generation. Empty means nobody can.
+GENERATION_ALLOWED_EMAILS=
 ```
 
 ## Deployment
