@@ -79,6 +79,7 @@ before(async () => {
       JWT_ACCESS_SECRET: SECRET,
       GEMINI_API_KEY: "not-used",
       OPENAI_API_KEY: "not-used",
+      GENERATION_ALLOWED_EMAILS: "carol@example.com,DAVE@example.com",
     },
   });
   await waitFor(async () => {
@@ -131,6 +132,17 @@ describe("auth responses", () => {
 });
 
 describe("new accounts", () => {
+  test("an email off the list cannot sign up", async () => {
+    const email = "stranger@example.com";
+    const res = await send("POST", "/api/auth/register", {
+      fullName: "Stranger",
+      email,
+      password: "long-enough-password",
+    });
+    assert.equal(res.status, 403);
+    assert.equal(await users.countDocuments({ email }), 0);
+  });
+
   test("someone who signs up can log in with the same password", async () => {
     const credentials = { email: "dave@example.com", password: "long-enough-password" };
     const signup = await send("POST", "/api/auth/register", {
