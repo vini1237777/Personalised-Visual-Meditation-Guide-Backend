@@ -3,6 +3,12 @@ import scriptService from "../services/scriptService";
 import { GoogleGenAI } from "@google/genai";
 import { ChatOpenAI } from "@langchain/openai";
 import { promptVal } from "../lib/functions";
+import {
+  fileIdFromVeoUri,
+  isValidFileId,
+  streamVeoVideo,
+  videoPath,
+} from "../lib/geminiVideo";
 import "dotenv/config";
 
 // @ts-ignore: Unreachable code error
@@ -63,7 +69,14 @@ async function fetchScript({
   }
 }
 
-async function getScriptVideo(script: string) {
+const VEO_POLL_MS = 10_000;
+const VEO_TIME_LIMIT_MS = 6 * 60 * 1000;
+
+function publicApiUrl(req: express.Request) {
+  return process.env.PUBLIC_API_URL || `${req.protocol}://${req.get("host")}`;
+}
+
+async function getScriptVideoFileId(script: string) {
   const prompt = `You are an animation expert.
   Use the following script to create a visual meditation guide animation:
   "${script}". The video must:
@@ -72,20 +85,18 @@ async function getScriptVideo(script: string) {
     model: "veo-3.1-generate-preview",
     prompt,
   });
+  const deadline = Date.now() + VEO_TIME_LIMIT_MS;
   while (!operation.done) {
-    await new Promise((r) => setTimeout(r, 10000));
+    if (Date.now() > deadline) throw new Error("Video generation timed out");
+    await new Promise((r) => setTimeout(r, VEO_POLL_MS));
     operation = await ai.operations.getVideosOperation({ operation });
   }
   const videoUri = operation?.response?.generatedVideos?.[0]?.video?.uri;
+  if (!videoUri) return null;
 
-  if (videoUri && videoUri?.length > 0) {
-    const url = decodeURIComponent(videoUri);
-    const videoUriResponse = await fetch(`${url}&key=${apiKey}`);
-    const videoUrlRes = videoUriResponse?.url;
-    return videoUrlRes;
-  } else {
-    return "";
-  }
+  const fileId = fileIdFromVeoUri(videoUri);
+  if (!fileId) throw new Error("Unexpected video link from Veo");
+  return fileId;
 }
 
 export default class scriptGeneratorController {
@@ -108,7 +119,8 @@ export default class scriptGeneratorController {
         return res.status(502).json({ message: "Script generation failed" });
       }
 
-      const videoUrl = await getScriptVideo(generatedScripts);
+      const fileId = await getScriptVideoFileId(generatedScripts);
+      const videoUrl = fileId ? `${publicApiUrl(req)}${videoPath(fileId)}` : "";
 
       await scriptService.getScript({
         selectedFeelings,
@@ -125,5 +137,18 @@ export default class scriptGeneratorController {
     } catch (err) {
       next(err);
     }
+  }
+
+  static async streamVideo(req: express.Request, res: express.Response) {
+    const fileId = String(req.params.fileId ?? "");
+    if (!isValidFileId(fileId)) {
+      return res.status(400).json({ message: "Invalid video id" });
+    }
+    await streamVeoVideo({
+      fileId,
+      range: req.headers.range,
+      res,
+      apiKey: apiKey as string,
+    });
   }
 }
