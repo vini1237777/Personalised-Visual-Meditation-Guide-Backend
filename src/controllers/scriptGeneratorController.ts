@@ -10,6 +10,12 @@ import {
   streamVeoVideo,
   videoPath,
 } from "../lib/geminiVideo";
+import {
+  copyVeoVideoToS3,
+  isS3Enabled,
+  LINK_EXPIRES_SECONDS,
+  presignVideo,
+} from "../lib/videoStorage";
 import "dotenv/config";
 
 // @ts-ignore: Unreachable code error
@@ -100,7 +106,50 @@ async function getScriptVideoFileId(script: string) {
   return fileId;
 }
 
+// A failed copy should not cost the viewer their video, so it falls back to the
+// streaming route. Google expires that file, so the video just won't last as long.
+async function deliverVideo(
+  fileId: string,
+  userId: string,
+  req: express.Request,
+): Promise<{ videoUrl: string; videoKey?: string }> {
+  const streamed = `${publicApiUrl(req)}${videoPath(fileId)}`;
+  if (!isS3Enabled()) return { videoUrl: streamed };
+  try {
+    const videoKey = await copyVeoVideoToS3({
+      fileId,
+      userId,
+      apiKey: apiKey as string,
+    });
+    return { videoUrl: await presignVideo(videoKey), videoKey };
+  } catch (err) {
+    console.error("S3 copy failed:", (err as Error).message);
+    return { videoUrl: streamed };
+  }
+}
+
 export default class scriptGeneratorController {
+  // Links expire, so a signed in user can ask for a new one to their own video.
+  static async getVideoLink(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) {
+    try {
+      const user = await UserDao.getById(String(req.user?.sub));
+      if (!user) return res.status(401).json({ error: "Unauthorized" });
+      if (!user.videoKey || !isS3Enabled()) {
+        return res.status(404).json({ message: "No saved video" });
+      }
+      return res.status(200).json({
+        videoUrl: await presignVideo(user.videoKey),
+        expiresInSeconds: LINK_EXPIRES_SECONDS,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async getScript(
     req: express.Request,
     res: express.Response,
@@ -124,14 +173,16 @@ export default class scriptGeneratorController {
       }
 
       const fileId = await getScriptVideoFileId(generatedScripts);
-      const videoUrl = fileId ? `${publicApiUrl(req)}${videoPath(fileId)}` : "";
+      const { videoUrl, videoKey } = fileId
+        ? await deliverVideo(fileId, String(user._id), req)
+        : { videoUrl: "", videoKey: undefined };
 
       await scriptService.getScript({
         selectedFeelings,
         selectedEmojis,
         email,
         generatedScripts,
-        videoUrl,
+        videoKey,
       });
 
       return res.status(200).json({

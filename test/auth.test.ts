@@ -181,6 +181,20 @@ describe("generation route", () => {
   });
 });
 
+describe("video link", () => {
+  test("needs a login", async () => {
+    const res = await fetch(`${BASE}/api/script/video-link`);
+    assert.equal(res.status, 401);
+  });
+
+  test("says so when there is no saved video", async () => {
+    const res = await fetch(`${BASE}/api/script/video-link`, {
+      headers: { authorization: `Bearer ${tokenFor(aliceId)}` },
+    });
+    assert.equal(res.status, 404);
+  });
+});
+
 describe("user routes", () => {
   test("reads the signed in user, whatever email is sent", async () => {
     const res = await fetch(`${BASE}/api/user/get`, {

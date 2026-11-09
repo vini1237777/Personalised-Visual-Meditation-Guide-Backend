@@ -7,19 +7,19 @@ export default class scriptService {
     selectedEmojis,
     email,
     generatedScripts,
-    videoUrl,
+    videoKey,
   }: {
     selectedFeelings: string[];
     selectedEmojis: any;
     email: any;
     generatedScripts: any;
-    videoUrl: any;
+    videoKey?: string | undefined;
   }) {
-    UserDao?.update(email, {
+    await UserDao.update(email, {
       selectedFeelings,
       selectedEmojis,
       generatedScripts,
-      videoUrl,
+      videoKey,
     });
 
     return scriptDao.getScript({ email: email });
