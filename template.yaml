@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: SoulSync meditation generation worker
+
+Parameters:
+  VideoBucket:
+    Type: String
+    Description: Name of the private bucket that holds generated videos
+  PublicApiUrl:
+    Type: String
+    Description: Public URL of the API, used for the streaming fallback link
+  SecretName:
+    Type: String
+    Default: soulsync/generation
+    Description: Secrets Manager secret with MONGODB_URI, GEMINI_API_KEY and OPENAI_API_KEY
+
+Resources:
+  GenerationDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  GenerationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      # Must be longer than the function timeout. A crashed job comes back after
+      # this, by which time jobRunner treats its old claim as stale.
+      VisibilityTimeout: 1080
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt GenerationDeadLetterQueue.Arn
+        maxReceiveCount: 2
+
+  GenerationFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - src/lambda/generationWorker.ts
+        Target: node22
+    Properties:
+      CodeUri: ./
+      Handler: src/lambda/generationWorker.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      MemorySize: 512
+      Timeout: 900
+      Environment:
+        Variables:
+          S3_VIDEO_BUCKET: !Ref VideoBucket
+          PUBLIC_API_URL: !Ref PublicApiUrl
+          MONGODB_URI: !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:MONGODB_URI}}"
+          GEMINI_API_KEY: !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:GEMINI_API_KEY}}"
+          OPENAI_API_KEY: !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:OPENAI_API_KEY}}"
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:AbortMultipartUpload
+              Resource: !Sub "arn:aws:s3:::${VideoBucket}/videos/*"
+      Events:
+        Jobs:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt GenerationQueue.Arn
+            BatchSize: 1
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+            # Each job pays for a Veo video, so this caps spend under a burst.
+            ScalingConfig:
+              MaximumConcurrency: 2
+
+Outputs:
+  QueueUrl:
+    Description: Set this as SQS_QUEUE_URL on the API server
+    Value: !Ref GenerationQueue
+  DeadLetterQueueUrl:
+    Value: !Ref GenerationDeadLetterQueue

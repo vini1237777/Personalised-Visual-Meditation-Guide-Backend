@@ -12,6 +12,7 @@ router.post(
   validateRequest(generateSchema),
   scriptGeneratorController.getScript,
 );
+router.get("/jobs/:jobId", authMiddleware, scriptGeneratorController.getJob);
 router.get(
   "/video-link",
   authMiddleware,
