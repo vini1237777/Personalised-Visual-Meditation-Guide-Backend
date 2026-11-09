@@ -1,8 +1,7 @@
 import { createHmac } from "node:crypto";
 import express from "express";
+import { isbot } from "isbot";
 import Visitor from "../models/visitorModel";
-
-const BOT = /bot|crawl|spider|slurp|preview|headless|lighthouse|curl|wget|python|axios|node-fetch/i;
 
 const router = express.Router();
 
@@ -11,7 +10,8 @@ router.post("/", async (req, res, next) => {
     const secret = process.env.VISIT_HASH_SECRET || process.env.JWT_ACCESS_SECRET;
     if (!secret) return res.status(503).json({ message: "Unavailable" });
 
-    if (!BOT.test(req.get("user-agent") ?? "bot") && req.ip) {
+    const userAgent = req.get("user-agent");
+    if (userAgent && !isbot(userAgent) && req.ip) {
       const _id = createHmac("sha256", secret).update(req.ip).digest("hex");
       await Visitor.updateOne(
         { _id },

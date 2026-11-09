@@ -92,6 +92,12 @@ describe("visitor count", () => {
     assert.equal(await visit("10.0.0.4", "Mozilla/5.0 HeadlessChrome/130.0"), 1);
   });
 
+  test("a phone with bot in its model name still counts", async () => {
+    const phone =
+      "Mozilla/5.0 (Linux; Android 9; CUBOT X20 PRO) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36";
+    assert.equal(await visit("10.0.0.8", phone), 1);
+  });
+
   test("the address itself is never stored", async () => {
     await visit("10.0.0.7");
     const [doc] = await mongoose.connection.collection("visitors").find().toArray();
