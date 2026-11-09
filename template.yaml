@@ -9,6 +9,11 @@ Parameters:
   PublicApiUrl:
     Type: String
     Description: Public URL of the API, used for the streaming fallback link
+  VectorSearch:
+    Type: String
+    Default: "off"
+    AllowedValues: ["on", "off"]
+    Description: Turn on once the Atlas index in atlas/ exists
   SecretName:
     Type: String
     Default: soulsync/generation
@@ -50,6 +55,7 @@ Resources:
         Variables:
           S3_VIDEO_BUCKET: !Ref VideoBucket
           PUBLIC_API_URL: !Ref PublicApiUrl
+          VECTOR_SEARCH: !Ref VectorSearch
           MONGODB_URI: !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:MONGODB_URI}}"
           GEMINI_API_KEY: !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:GEMINI_API_KEY}}"
           OPENAI_API_KEY: !Sub "{{resolve:secretsmanager:${SecretName}:SecretString:OPENAI_API_KEY}}"

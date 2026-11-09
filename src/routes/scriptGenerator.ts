@@ -12,6 +12,12 @@ router.post(
   validateRequest(generateSchema),
   scriptGeneratorController.getScript,
 );
+router.post(
+  "/similar",
+  authMiddleware,
+  validateRequest(generateSchema),
+  scriptGeneratorController.getSimilarSessions,
+);
 router.get("/jobs/:jobId", authMiddleware, scriptGeneratorController.getJob);
 router.get(
   "/video-link",

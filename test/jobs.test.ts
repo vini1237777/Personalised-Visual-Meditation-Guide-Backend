@@ -239,6 +239,137 @@ describe("running a job", () => {
   });
 });
 
+describe("when generation fails", () => {
+  const fails = async () => {
+    throw new Error("Veo refused the prompt");
+  };
+  const memoryWith = (found: any[] = []) => {
+    const memory = {
+      saved: [] as any[],
+      asked: [] as any[],
+      save: async (session: any) => {
+        memory.saved.push(session);
+      },
+      findClosest: async (...args: any[]) => {
+        memory.asked.push(args);
+        return found;
+      },
+    };
+    return memory;
+  };
+  const closest = {
+    generatedScripts: "An older script",
+    videoKey: "videos/a/old.mp4",
+    selectedFeelings: ["Calm"],
+    selectedEmojis: [],
+    score: 0.9,
+  };
+
+  test("offers this user's closest saved session", async () => {
+    const jobId = await newJob();
+    const memory = memoryWith([closest]);
+    assert.equal(await runJob(jobId, fails, memory), "reused");
+    assert.equal(memory.asked[0][0], aliceId);
+    const job = await GenerationJob.findById(jobId);
+    assert.equal(job?.status, "done");
+    assert.equal(job?.reused, true);
+    assert.equal(job?.videoKey, "videos/a/old.mp4");
+  });
+
+  test("the client is told the video is a saved one", async () => {
+    const jobId = await newJob();
+    await runJob(jobId, fails, memoryWith([closest]));
+    const body = await (await getJob(jobId, aliceId)).json();
+    assert.equal(body.reused, true);
+    assert.ok(new URL(body.videoUrl).pathname.endsWith("videos/a/old.mp4"));
+  });
+
+  test("fails plainly when there is nothing saved", async () => {
+    const jobId = await newJob();
+    assert.equal(await runJob(jobId, fails, memoryWith()), "failed");
+    assert.equal(await statusOf(jobId), "failed");
+  });
+
+  test("a failed search still ends the job", async () => {
+    const jobId = await newJob();
+    const memory = {
+      save: async () => {},
+      findClosest: async () => {
+        throw new Error("index is building");
+      },
+    };
+    assert.equal(await runJob(jobId, fails, memory), "failed");
+    assert.equal(await statusOf(jobId), "failed");
+  });
+});
+
+describe("remembering a session", () => {
+  const memoryThat = (save: (s: any) => Promise<void>) => ({
+    save,
+    findClosest: async () => [],
+  });
+
+  test("saves a video that is in S3", async () => {
+    const saved: any[] = [];
+    await runJob(
+      await newJob(),
+      counting({ generatedScripts: "Breathe", videoKey: "videos/a/new.mp4" }),
+      memoryThat(async (s) => void saved.push(s)),
+    );
+    assert.equal(saved.length, 1);
+    assert.equal(saved[0].userId, aliceId);
+    assert.equal(saved[0].videoKey, "videos/a/new.mp4");
+  });
+
+  test("skips a video that only Google holds, since it will expire", async () => {
+    const saved: any[] = [];
+    await runJob(
+      await newJob(),
+      counting({ generatedScripts: "Breathe", videoUrl: "http://api.test/v" }),
+      memoryThat(async (s) => void saved.push(s)),
+    );
+    assert.equal(saved.length, 0);
+  });
+
+  test("a failed embedding does not fail the finished job", async () => {
+    const jobId = await newJob();
+    const outcome = await runJob(
+      jobId,
+      counting({ generatedScripts: "Breathe", videoKey: "videos/a/new.mp4" }),
+      memoryThat(async () => {
+        throw new Error("Gemini is down");
+      }),
+    );
+    assert.equal(outcome, "finished");
+    assert.equal(await statusOf(jobId), "done");
+  });
+});
+
+describe("the similar sessions route", () => {
+  const similar = (headers: Record<string, string>, body: unknown = request) =>
+    fetch(`${BASE}/api/script/similar`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify(body),
+    });
+  const auth = () => ({ authorization: `Bearer ${tokenFor(aliceId)}` });
+
+  test("needs a login", async () => {
+    assert.equal((await similar({})).status, 401);
+  });
+
+  test("rejects a bad body before any embedding", async () => {
+    const res = await similar(auth(), { selectedFeelings: [] });
+    assert.equal(res.status, 400);
+  });
+
+  test("is empty, with no outside call, when search is off", async () => {
+    const res = await similar(auth());
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { sessions: [] });
+  });
+});
+
 describe("the Lambda handler", () => {
   test("runs the job in the message", async () => {
     const jobId = await newJob();
