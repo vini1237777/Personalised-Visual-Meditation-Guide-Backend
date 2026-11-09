@@ -9,17 +9,14 @@ const ACCESS_EXPIRES_IN = "1h";
 export default class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
-      const { fullName, email, password, confirmPassword } = req.body;
+      const { fullName, email, password } = req.body;
       if (!fullName || !email || !password) {
         return res.status(400).json({ error: "All fields are required" });
       }
-      const hashedPassword = await bcrypt.hash(password, 10);
-
       const userData = await AuthService.register({
         fullName,
         email,
-        password: hashedPassword,
-        confirmPassword: hashedPassword,
+        password,
       });
 
       if (!userData) {
@@ -34,7 +31,7 @@ export default class AuthController {
       );
 
       return res.status(201).json({
-        user: { ...userData.user, password: hashedPassword },
+        user: userData.user,
         token,
       });
     } catch (err) {
@@ -77,7 +74,8 @@ export default class AuthController {
         { expiresIn: ACCESS_EXPIRES_IN || "1h" },
       );
 
-      return res.status(200).json({ token, ...userDoc });
+      const { password: _password, ...user } = userDoc;
+      return res.status(200).json({ token, ...user });
     } catch (err) {
       next(err);
     }
